@@ -1,0 +1,170 @@
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+    <title>Player</title>
+    <style>
+        .line-roma {
+            color: #00a;
+        }
+        .line.highlight {
+            background-color: yellow;
+        }
+        .chunk.highlight {
+            background-color: orange;
+        }
+        #ctrl-box {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+        }
+        #ctrl-box audio {
+            width: calc(100% - 200px);
+        }
+        #sync-value {
+            display: inline-block;
+            width: 40px;
+        }
+    </style>
+</head>
+<body>
+    <br>
+    <p>
+        <a href="{{ url_for('search') }}"><< Back</a>
+        <input id="audio-select" type="file">
+    </p>
+    <div id="ctrl-box">
+        <audio id="audio-player" controls></audio>
+        <label for="sync-slider"><span id="sync-value">0</span></label>
+        <input id="sync-slider" type="range" min="-1000" max="1000" value="0">
+    </div>
+    <div id="lrc-container"></div>
+
+    <!--suppress JSDuplicatedDeclaration -->
+    <script>
+        function $id(id) {
+            return document.getElementById(id);
+        }
+        function fetch_json(url,callback) {
+            var xhr=new XMLHttpRequest();
+            xhr.open('get',url);
+            xhr.onload=function() {
+                callback(JSON.parse(xhr.responseText));
+            };
+            xhr.send();
+        }
+
+        var $audio_player=$id('audio-player');
+        var $sync_slider=$id('sync-slider');
+        var $sync_value=$id('sync-value');
+
+        var orig_pool={line:[], chunk: {}};
+        var roma_pool={line:[], chunk: {}};
+
+        function inject_dom(container,data) {
+            function append_line(pool,line,chunks,mode) {
+                if(!line) return;
+                var line_elem=document.createElement('p');
+                line_elem.className='line line-'+mode;
+                pool.line.push(line_elem);
+                line.forEach(function(chunkid) {
+                    var chunk_elem=document.createElement('span');
+                    chunk_elem.className='chunk chunk-'+mode;
+                    chunk_elem.textContent=chunks[chunkid];
+                    line_elem.appendChild(chunk_elem);
+                    pool.chunk[chunkid]=chunk_elem;
+                });
+                container.appendChild(line_elem);
+            }
+            var maxlines=Math.max(data.orig.line_src.length,data.roma.line_src.length);
+            for(var i=0;i<maxlines;i++) {
+                append_line(orig_pool,data.orig.line_src[i],data.orig.chunk_src,'orig');
+                append_line(roma_pool,data.roma.line_src[i],data.roma.chunk_src,'roma');
+            }
+            orig_pool.line_action=data.orig.line_action;
+            orig_pool.chunk_action=data.orig.chunk_action;
+            orig_pool.line_cur=0;
+            orig_pool.chunk_cur=0;
+            roma_pool.line_action=data.roma.line_action;
+            roma_pool.chunk_action=data.roma.chunk_action;
+            roma_pool.line_cur=0;
+            roma_pool.chunk_cur=0;
+        }
+
+        var curtime=-1;
+        function progress_time(pool,time) { // time in ms
+            while(pool.line_action[pool.line_cur][0]<=time) {
+                //console.log('line',pool.line_cur);
+                var action=pool.line_action[pool.line_cur];
+                var elem=pool.line[action[2]];
+                if(action[1]) {
+                    elem.classList.add('highlight');
+                    elem.scrollIntoViewIfNeeded();
+                }
+                else elem.classList.remove('highlight');
+                pool.line_cur++;
+            }
+            while(pool.chunk_action[pool.chunk_cur][0]<=time) {
+                //console.log('chunk',pool.chunk_cur);
+                var action=pool.chunk_action[pool.chunk_cur];
+                var elem=pool.chunk[action[2]];
+                if(action[1]) elem.classList.add('highlight');
+                else elem.classList.remove('highlight');
+                pool.chunk_cur++;
+            }
+        }
+        function progress_time_rev(pool,time) {
+            while(pool.line_action[pool.line_cur][0]>time) {
+                //console.log('line',pool.line_cur);
+                var action=pool.line_action[pool.line_cur];
+                var elem=pool.line[action[2]];
+                if(!action[1]) {
+                    elem.classList.add('highlight');
+                    elem.scrollIntoViewIfNeeded();
+                }
+                else elem.classList.remove('highlight');
+                pool.line_cur--;
+            }
+            while(pool.chunk_action[pool.chunk_cur][0]>time) {
+                //console.log('chunk',pool.chunk_cur);
+                var action=pool.chunk_action[pool.chunk_cur];
+                var elem=pool.chunk[action[2]];
+                if(!action[1]) elem.classList.add('highlight');
+                else elem.classList.remove('highlight');
+                pool.chunk_cur--;
+            }
+        }
+
+        var lasttime=0;
+        var sync=0;
+        function tick() {
+            var time=Math.floor($audio_player.currentTime*1000)+sync;
+            if(lasttime>time) { // reverse
+                progress_time_rev(orig_pool,time);
+                progress_time_rev(roma_pool,time);
+            } else {
+                progress_time(orig_pool,time);
+                progress_time(roma_pool,time);
+            }
+            lasttime=time;
+            requestAnimationFrame(tick);
+        }
+
+        fetch_json('{{ url_for('api_get_lyric',songid=songid) }}',function(data) {
+            inject_dom($id('lrc-container'),data);
+            requestAnimationFrame(tick);
+        });
+
+        $id('audio-select').addEventListener('change',function(e) {
+            var file=e.target.files[0];
+            $audio_player.setAttribute('src',URL.createObjectURL(file));
+        });
+
+        $sync_slider.addEventListener('input',function() {
+            sync=parseInt($sync_slider.value);
+            $sync_value.textContent=sync;
+        });
+    </script>
+</body>
+</html>

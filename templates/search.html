@@ -1,0 +1,48 @@
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+    <title>Search</title>
+</head>
+<body>
+    <form action="?" method="post">
+        <p>
+            <label>
+                Title
+                <input name="name">
+            </label>
+        </p>
+        <p>
+            <label>
+                Artist
+                <input name="singer">
+            </label>
+        </p>
+        <p>
+            <button type="submit">Search</button>
+        </p>
+    </form>
+    {% if result %}
+        <table>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Name</th>
+                <th>Singer</th>
+                <th>Album</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in result %}
+                <tr>
+                    <td><a href="{{ url_for('play',songid=item.songid) }}">{{ item.songid }}</a></td>
+                    <td>{{ item.name }}</td>
+                    <td>{{ item.singer }}</td>
+                    <td>{{ item.album }}</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+        </table>
+    {% endif %}
+</body>
+</html>

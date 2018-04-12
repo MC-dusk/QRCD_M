@@ -50,7 +50,7 @@ def api_get_lyric(songid):
         for line_s in data.split('\n'):
             line=qrc_line_re.match(line_s)
             if not line:
-                print('ignored LINE:',line_s)
+                #print('ignored LINE:',line_s)
                 continue
 
             time_s,dt,content=line.groups()
@@ -65,7 +65,7 @@ def api_get_lyric(songid):
             for chunk_s in content.split(')'):
                 chunk=qrc_chunk_re.match(chunk_s)
                 if not chunk:
-                    print('ignored CHUNK:',chunk_s)
+                    #print('ignored CHUNK:',chunk_s)
                     continue
 
                 content,time_s,dt=chunk.groups()

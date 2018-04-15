@@ -1,3 +1,4 @@
+#!python3.6-32
 #coding=utf-8
 import qrcd
 import re
@@ -24,7 +25,7 @@ def play(songid):
 
 @app.route('/api/get_lyric/<int:songid>')
 def api_get_lyric(songid):
-    lrc=qrcd.fetch_lyric_by_id(songid,['orig','roma'])
+    lrc=qrcd.fetch_lyric_by_id(songid,['orig','roma','ts'])
 
     def parse_qrc(data):
         INF=2147483647
@@ -38,19 +39,21 @@ def api_get_lyric(songid):
             chunkid=len(chunk_src)
             line_src[-1].append(chunkid)
             chunk_src.append(data)
-            chunk_action.append([time_s,True,chunkid])
-            chunk_action.append([time_s+dt,False,chunkid])
+            if time_s is not None:
+                chunk_action.append([time_s,True,chunkid])
+                chunk_action.append([time_s+dt,False,chunkid])
 
         line_src.append([])
         line_action.append([-INF,False,0])
         line_action.append([INF,True,0])
         chunk_action.append([-INF,False,0])
         chunk_action.append([INF,True,0])
+        chunk_src.append(None)
 
         for line_s in data.split('\n'):
             line=qrc_line_re.match(line_s)
             if not line:
-                #print('ignored LINE:',line_s)
+                print('ignored LINE:',line_s)
                 continue
 
             time_s,dt,content=line.groups()
@@ -62,10 +65,15 @@ def api_get_lyric(songid):
             line_action.append([time_s,True,lineid])
             line_action.append([time_s+dt,False,lineid])
 
-            for chunk_s in content.split(')'):
+            splited_content=content.split(')')
+            for ind,chunk_s in enumerate(splited_content):
                 chunk=qrc_chunk_re.match(chunk_s)
                 if not chunk:
-                    #print('ignored CHUNK:',chunk_s)
+                    if len(splited_content)==ind+1: # last chunk without timestamp
+                        if chunk_s:
+                            apply_chunk(chunk_s,None,None)
+                    else: # notmal ')'
+                        splited_content[ind+1]=chunk_s+')'+splited_content[ind+1]
                     continue
 
                 content,time_s,dt=chunk.groups()
@@ -86,6 +94,7 @@ def api_get_lyric(songid):
     return jsonify(
         orig=parse_qrc(lrc['orig']),
         roma=parse_qrc(lrc['roma']),
+        ts=parse_qrc(lrc['ts']),
     )
 
 app.run('0.0.0.0',80)

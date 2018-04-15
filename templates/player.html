@@ -4,27 +4,79 @@
     <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
     <title>Player</title>
     <style>
+        .line {
+            margin: 0;
+            min-height: 1em;
+            text-align: center;
+            font-family: 微软雅黑, sans-serif;
+        }
+        
+        .line-orig {
+            color: #000;
+        }
         .line-roma {
             color: #00a;
         }
+        .line-ts {
+            color: #080;
+        }
+        .should-hidden-orig .line-orig,
+        .should-hidden-roma .line-roma,
+        .should-hidden-ts .line-ts {
+            display: none;
+        }
+        
+        .should-hidden-orig #tick-bar-orig,
+        .should-hidden-roma #tick-bar-roma,
+        .should-hidden-ts #tick-bar-ts {
+            visibility: hidden;
+        }
+        
         .line.highlight {
             background-color: yellow;
         }
         .chunk.highlight {
             background-color: orange;
         }
+        
+        .chunk:hover {
+            background-color: #ddd;
+        }
+        
         #ctrl-box {
             position: fixed;
             top: 0;
             left: 0;
             right: 0;
+            background-color: #eee;
+            vertical-align: middle;
+        }
+        #ctrl-box label, #ctrl-box audio {
+            vertical-align: middle;
         }
         #ctrl-box audio {
-            width: calc(100% - 200px);
+            width: calc(100% - 300px);
         }
         #sync-value {
             display: inline-block;
             width: 40px;
+            text-align: right;
+        }
+        #sync-slider {
+            width: 100px;
+        }
+        
+        #tick-bar-box {
+            position: relative;
+            height: 0;
+            z-index: 1;
+        }
+        .tick-bar {
+            background: red;
+            opacity: .3;
+            pointer-events: none;
+            height: 10px;
+            width: 0;
         }
     </style>
 </head>
@@ -35,9 +87,25 @@
         <input id="audio-select" type="file">
     </p>
     <div id="ctrl-box">
+        <div id="tick-bar-box">
+            <div class="tick-bar" id="tick-bar-orig"></div>
+            <div class="tick-bar" id="tick-bar-roma"></div>
+            <div class="tick-bar" id="tick-bar-ts"></div>
+        </div>
         <audio id="audio-player" controls></audio>
-        <label for="sync-slider"><span id="sync-value">0</span></label>
-        <input id="sync-slider" type="range" min="-1000" max="1000" value="0">
+        <label>
+            <span id="sync-value">0</span>
+            <input id="sync-slider" type="range" min="-1000" max="1000" value="0">
+        </label>
+        <label>
+            <input data-display_toggle="orig" type="checkbox" checked>原
+        </label>
+        <label>
+            <input data-display_toggle="roma" type="checkbox" checked>音
+        </label>
+        <label>
+            <input data-display_toggle="ts" type="checkbox" checked>译
+        </label>
     </div>
     <div id="lrc-container"></div>
 
@@ -59,8 +127,11 @@
         var $sync_slider=$id('sync-slider');
         var $sync_value=$id('sync-value');
 
-        var orig_pool={line:[], chunk: {}};
-        var roma_pool={line:[], chunk: {}};
+        var TICKBAR_SPEED=20;
+        
+        var orig_pool={line:[], chunk: {}, tickbar: $id('tick-bar-orig')};
+        var roma_pool={line:[], chunk: {}, tickbar: $id('tick-bar-roma')};
+        var ts_pool={line:[], chunk: {}, tickbar: $id('tick-bar-ts')};
 
         function inject_dom(container,data) {
             function append_line(pool,line,chunks,mode) {
@@ -77,19 +148,21 @@
                 });
                 container.appendChild(line_elem);
             }
-            var maxlines=Math.max(data.orig.line_src.length,data.roma.line_src.length);
+            var maxlines=Math.max(data.orig.line_src.length, data.roma.line_src.length, data.ts.line_src.length);
             for(var i=0;i<maxlines;i++) {
                 append_line(orig_pool,data.orig.line_src[i],data.orig.chunk_src,'orig');
                 append_line(roma_pool,data.roma.line_src[i],data.roma.chunk_src,'roma');
+                append_line(ts_pool,data.ts.line_src[i],data.ts.chunk_src,'ts');
+                container.appendChild(document.createElement('br'));
             }
-            orig_pool.line_action=data.orig.line_action;
-            orig_pool.chunk_action=data.orig.chunk_action;
-            orig_pool.line_cur=0;
-            orig_pool.chunk_cur=0;
-            roma_pool.line_action=data.roma.line_action;
-            roma_pool.chunk_action=data.roma.chunk_action;
-            roma_pool.line_cur=0;
-            roma_pool.chunk_cur=0;
+            [[orig_pool,data.orig], [roma_pool,data.roma], [ts_pool,data.ts]].forEach(function(arg) {
+                var pool=arg[0];
+                var thedata=arg[1];
+                pool.line_action=thedata.line_action;
+                pool.chunk_action=thedata.chunk_action;
+                pool.line_cur=0;
+                pool.chunk_cur=0;
+            })
         }
 
         var curtime=-1;
@@ -98,19 +171,24 @@
                 //console.log('line',pool.line_cur);
                 var action=pool.line_action[pool.line_cur];
                 var elem=pool.line[action[2]];
-                if(action[1]) {
-                    elem.classList.add('highlight');
-                    elem.scrollIntoViewIfNeeded();
+                if(elem) {
+                    if(action[1]) {
+                        elem.classList.add('highlight');
+                        elem.scrollIntoViewIfNeeded();
+                    }
+                    else elem.classList.remove('highlight');
                 }
-                else elem.classList.remove('highlight');
                 pool.line_cur++;
             }
+            pool.tickbar.style.width = pool.line_action[pool.line_cur][2]==0 ? 0 : (((pool.line_action[pool.line_cur][0]-time)/TICKBAR_SPEED)+'px');
             while(pool.chunk_action[pool.chunk_cur][0]<=time) {
                 //console.log('chunk',pool.chunk_cur);
                 var action=pool.chunk_action[pool.chunk_cur];
                 var elem=pool.chunk[action[2]];
-                if(action[1]) elem.classList.add('highlight');
-                else elem.classList.remove('highlight');
+                if(elem) {
+                    if(action[1]) elem.classList.add('highlight');
+                    else elem.classList.remove('highlight');
+                }
                 pool.chunk_cur++;
             }
         }
@@ -119,19 +197,23 @@
                 //console.log('line',pool.line_cur);
                 var action=pool.line_action[pool.line_cur];
                 var elem=pool.line[action[2]];
-                if(!action[1]) {
-                    elem.classList.add('highlight');
-                    elem.scrollIntoViewIfNeeded();
+                if(elem) {
+                    if(!action[1]) {
+                        elem.classList.add('highlight');
+                        elem.scrollIntoViewIfNeeded();
+                    }
+                    else elem.classList.remove('highlight');
                 }
-                else elem.classList.remove('highlight');
                 pool.line_cur--;
             }
             while(pool.chunk_action[pool.chunk_cur][0]>time) {
                 //console.log('chunk',pool.chunk_cur);
                 var action=pool.chunk_action[pool.chunk_cur];
                 var elem=pool.chunk[action[2]];
-                if(!action[1]) elem.classList.add('highlight');
-                else elem.classList.remove('highlight');
+                if(elem) {
+                    if(!action[1]) elem.classList.add('highlight');
+                    else elem.classList.remove('highlight');
+                }
                 pool.chunk_cur--;
             }
         }
@@ -143,9 +225,11 @@
             if(lasttime>time) { // reverse
                 progress_time_rev(orig_pool,time);
                 progress_time_rev(roma_pool,time);
+                progress_time_rev(ts_pool,time);
             } else {
                 progress_time(orig_pool,time);
                 progress_time(roma_pool,time);
+                progress_time(ts_pool,time);
             }
             lasttime=time;
             requestAnimationFrame(tick);
@@ -164,6 +248,15 @@
         $sync_slider.addEventListener('input',function() {
             sync=parseInt($sync_slider.value);
             $sync_value.textContent=sync;
+        });
+        [].slice.call(document.querySelectorAll('[data-display_toggle]')).forEach(function(elem) {
+            var cls=elem.dataset['display_toggle'];
+            elem.addEventListener('click', function() {
+                if(elem.checked)
+                    document.body.classList.remove('should-hidden-'+cls);
+                else
+                    document.body.classList.add('should-hidden-'+cls);
+            })
         });
     </script>
 </body>

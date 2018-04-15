@@ -1,17 +1,20 @@
+#!python3.6-32
 import requests
 import urllib.parse
 from bs4 import BeautifulSoup as bs
 import binascii
 from ctypes import *
 import re
+import datetime
 
 mydll = cdll.LoadLibrary('LyricDecoder.dll')
 mydll.qrcdecode.restype=c_char_p
 
 extract_xml_re=re.compile(r'<Lyric_1 LyricType="1" LyricContent="(.*?)"/>',re.DOTALL)
+lrc_line_re=re.compile(r'^\[(\d+:\d+(?:\.\d+)?)\](.*)$')
 
 def qrc_decode(data):
-    return mydll.qrcdecode(data,len(data))
+    return mydll.qrcdecode(data,len(data)) or b''
     
 def query_lyric(name,singer):
     res=requests.get('https://c.y.qq.com/lyric/fcgi-bin/fcg_search_pc_lrc.fcg',params=dict(
@@ -42,7 +45,11 @@ def download_lyric(songid):
     soup=bs(res.text.replace('<!--','').replace('-->',''),'xml')
     
     def decode(obj):
-        return binascii.unhexlify(obj.text.encode('ascii'))
+        txt=obj.text
+        if txt.strip():
+            return binascii.unhexlify(txt.encode('ascii'))
+        else:
+            return b''
     
     return dict(
         orig=decode(soup.find('content')),
@@ -53,10 +60,30 @@ def download_lyric(songid):
 def tamper_lyric(data):
     return b'[offset:0]\n'+data
     
-def extract_xml(data):
+def lrc_to_dummy_qrc(data):
+    outputs=[]
+    for line_s in data.replace('\r','').split('\n'):
+        line=lrc_line_re.match(line_s)
+        if not line:
+            print('ignored LINE:',line_s)
+            continue
+            
+        timestamp,content=line.groups()
+        time=datetime.datetime.strptime(timestamp,'%M:%S.%f')
+        
+        outputs.append((time.minute*60*1000+time.second*1000+time.microsecond//1000,content))
+        
+    if not outputs:
+        return ''
+    
+    return '\n'.join([
+        '[%d,%d]%s'%(time,outputs[ind+1][0]-time,content) for ind,(time,content) in enumerate(outputs[:-1]) if content
+    ])
+    
+def extract_qrc_xml(data):
     if '<?xml ' not in data[:10]:
-        #return ''
-        return data
+        #return data
+        return lrc_to_dummy_qrc(data)
     #so that `\n`s are preversed
     return extract_xml_re.search(data).groups()[0]
     
@@ -64,7 +91,7 @@ def fetch_lyric_by_id(songid,requested_type):
     lrc=download_lyric(songid)
     ret={}
     for typ in requested_type:
-        ret[typ]=extract_xml(qrc_decode(tamper_lyric(lrc[typ])).decode('utf-8','ignore'))
+        ret[typ]=extract_qrc_xml(qrc_decode(tamper_lyric(lrc[typ])).decode('utf-8','ignore'))
     return ret
     
 #print(list(query_lyric('ユキトキ','やなぎなぎ')))
@@ -82,7 +109,7 @@ if __name__=='__main__':
     print('Searching...')
     songlist=list(query_lyric(title,artist))
     for ind,song in enumerate(songlist):
-        print('#%d: %s / %s / %s'%(ind,song['name'],song['singer'],song['album']))
+        print('#%d: (%s) %s / %s / %s'%(ind,song['songid'],song['name'],song['singer'],song['album']))
     cid=int(input('Select #: '))
     songid=songlist[cid]['songid']
     print('Song ID = %s'%songid)

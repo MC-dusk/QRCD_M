@@ -8,6 +8,6 @@ It uses the API for QQMusic PC client, so **romanized lyrics are supported**, un
 
 ## displayer
 
-![image](https://user-images.githubusercontent.com/6646473/38632263-c2be8f6a-3dee-11e8-9633-08b0dda9464d.png)
+![image](https://user-images.githubusercontent.com/6646473/38776841-25c4ed64-40d0-11e8-9b5c-91975b12b714.png)
 
 A simple lyric viewer with romanization support.

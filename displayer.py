@@ -1,5 +1,3 @@
-#!python3.6-32
-#coding=utf-8
 import qrcd
 import re
 from flask import *

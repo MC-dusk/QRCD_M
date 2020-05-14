@@ -1,20 +1,23 @@
-#!python3.6-32
 import requests
 import urllib.parse
 from bs4 import BeautifulSoup as bs
 import binascii
-from ctypes import *
+import subprocess
 import re
 import datetime
-
-mydll = cdll.LoadLibrary('LyricDecoder.dll')
-mydll.qrcdecode.restype=c_char_p
+import zlib
 
 extract_xml_re=re.compile(r'<Lyric_1 LyricType="1" LyricContent="(.*?)"/>',re.DOTALL)
 lrc_line_re=re.compile(r'^\[(\d+:\d+(?:\.\d+)?)\](.*)$')
 
 def qrc_decode(data):
-    return mydll.qrcdecode(data,len(data)) or b''
+    data=binascii.hexlify(data)
+    p=subprocess.Popen('decoder.exe',stdin=subprocess.PIPE,stdout=subprocess.PIPE)
+    stdout,stderr=p.communicate(data+b'\n\n')
+    if stderr:
+        raise RuntimeError(stderr.decode(errors='ignore'))
+    data=binascii.unhexlify(stdout.strip())
+    return zlib.decompress(data)
     
 def query_lyric(name,singer):
     res=requests.get('https://c.y.qq.com/lyric/fcgi-bin/fcg_search_pc_lrc.fcg',params=dict(
@@ -76,6 +79,8 @@ def lrc_to_dummy_qrc(data):
     if not outputs:
         return ''
     
+    outputs.append((2147483647,'')) # end
+    
     return '\n'.join([
         '[%d,%d]%s'%(time,outputs[ind+1][0]-time,content) for ind,(time,content) in enumerate(outputs[:-1]) if content
     ])
@@ -91,17 +96,8 @@ def fetch_lyric_by_id(songid,requested_type):
     lrc=download_lyric(songid)
     ret={}
     for typ in requested_type:
-        ret[typ]=extract_qrc_xml(qrc_decode(tamper_lyric(lrc[typ])).decode('utf-8','ignore'))
+        ret[typ]=extract_qrc_xml(qrc_decode(lrc[typ]).decode('utf-8','ignore'))
     return ret
-    
-#print(list(query_lyric('ユキトキ','やなぎなぎ')))
-#lrc=download_lyric(4804827)
-#with open('roma.xml','wb') as f:
-#    f.write(qrc_decode(tamper_lyric(lrc['roma'])))
-#with open('orig.xml','wb') as f:
-#    f.write(qrc_decode(tamper_lyric(lrc['orig'])))
-#with open('ts.xml','wb') as f:
-#    f.write(qrc_decode(tamper_lyric(lrc['ts'])))
 
 if __name__=='__main__':
     title=input('Title: ')

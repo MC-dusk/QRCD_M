@@ -96,7 +96,10 @@ def fetch_lyric_by_id(songid,requested_type):
     lrc=download_lyric(songid)
     ret={}
     for typ in requested_type:
-        ret[typ]=extract_qrc_xml(qrc_decode(lrc[typ]).decode('utf-8','ignore'))
+        if lrc[typ]:
+            ret[typ]=extract_qrc_xml(qrc_decode(lrc[typ]).decode('utf-8','ignore'))
+        else:
+            ret[typ]=''
     return ret
 
 if __name__=='__main__':

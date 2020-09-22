@@ -4,21 +4,52 @@
     <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
     <title>Player</title>
     <style>
+        body {
+            cursor: cell;
+            margin: 0 10px 10em 100px;
+            background-color: black;
+            color: white;
+            transition: opacity 150ms;
+        }
+        ::-webkit-scrollbar {
+            display: none;
+        }
+        
+        body.hide-all {
+            opacity: 0;
+        }
+    
         .line {
             margin: 0;
-            min-height: 1em;
+            min-height: 1rem;
             text-align: center;
+            white-space: nowrap;
             font-family: 微软雅黑, sans-serif;
         }
         
+        .splitter {
+            height: .5em;
+        }
+        
         .line-orig {
-            color: #000;
+            font-size: .9em;
+            color: /*white*/white;
         }
         .line-roma {
-            color: #00a;
+            color: /*#ddf*/#ddf;
+            font-size: .65em;
+            margin: -.15rem 0;
         }
         .line-ts {
-            color: #080;
+            font-size: .9em;
+            float: right;
+            width: 45%;
+            color: /*#dfd*/#dfd;
+            text-align: left;
+        }
+        body:not(.should-hidden-ts) .line-orig, body:not(.should-hidden-ts)  .line-roma {
+            margin-right: 50%;
+            text-align: right;
         }
         .should-hidden-orig .line-orig,
         .should-hidden-roma .line-roma,
@@ -32,15 +63,18 @@
             visibility: hidden;
         }
         
-        .line.highlight {
-            background-color: yellow;
-        }
-        .chunk.highlight {
-            background-color: orange;
-        }
-        
-        .chunk:hover {
+        .chunk:hover:not(.highlight) {
             background-color: #ddd;
+            color: black;
+        }
+        .line-ts.highlight, .line-orig.highlight {
+            font-size: 1.1em;
+        }
+        .line-roma.highlight {
+            font-size: .8em;
+        }
+        body:not(.hide-highlight) .chunk.highlight {
+            background-color: #540;
         }
         
         #ctrl-box {
@@ -67,37 +101,40 @@
         }
         
         #tick-bar-box {
-            position: relative;
             height: 0;
             z-index: 1;
         }
         .tick-bar {
-            background: red;
-            opacity: .3;
+            position: fixed;
+            top: 0;
+            right: 10px;
+            background-color: #c55;
             pointer-events: none;
-            height: 10px;
+            height: 5px;
             width: 0;
+        }
+        body.hide-highlight .tick-bar {
+            visibility: hidden;
         }
     </style>
 </head>
-<body>
-    <br>
-    <p>
+<body class="hide-all">
+    <!--<p>
         <a href="{{ url_for('search') }}"><< Back</a>
         <input id="audio-select" type="file">
-    </p>
+    </p>-->
     <div id="ctrl-box">
         <div id="tick-bar-box">
             <div class="tick-bar" id="tick-bar-orig"></div>
-            <div class="tick-bar" id="tick-bar-roma"></div>
-            <div class="tick-bar" id="tick-bar-ts"></div>
+            <!--<div class="tick-bar" id="tick-bar-roma"></div>
+            <div class="tick-bar" id="tick-bar-ts"></div>-->
         </div>
-        <audio id="audio-player" controls></audio>
-        <label>
+        <audio id="audio-player" src="/static/mute.mp3"></audio>
+        <!--<label>
             <span id="sync-value">0</span>
             <input id="sync-slider" type="range" min="-1000" max="1000" value="0">
-        </label>
-        <label>
+        </label>-->
+        <!--<label>
             <input data-display_toggle="orig" type="checkbox" checked>原
         </label>
         <label>
@@ -105,11 +142,11 @@
         </label>
         <label>
             <input data-display_toggle="ts" type="checkbox" checked>译
-        </label>
+        </label>-->
     </div>
     <div id="lrc-container"></div>
 
-    <!--suppress JSDuplicatedDeclaration -->
+    <script src="/static/sweet-scroll.min.js"></script>
     <script>
         function $id(id) {
             return document.getElementById(id);
@@ -122,19 +159,23 @@
             };
             xhr.send();
         }
+        
+        var scroller = new SweetScroll({
+            duration: 300,
+        });
 
         var $audio_player=$id('audio-player');
-        var $sync_slider=$id('sync-slider');
-        var $sync_value=$id('sync-value');
+        //var $sync_slider=$id('sync-slider');
+        //var $sync_value=$id('sync-value');
 
         var TICKBAR_SPEED=20;
         
         var orig_pool={line:[], chunk: {}, tickbar: $id('tick-bar-orig')};
-        var roma_pool={line:[], chunk: {}, tickbar: $id('tick-bar-roma')};
-        var ts_pool={line:[], chunk: {}, tickbar: $id('tick-bar-ts')};
+        var roma_pool={line:[], chunk: {}, tickbar: null};
+        var ts_pool={line:[], chunk: {}, tickbar: null};
 
         function inject_dom(container,data) {
-            function append_line(pool,line,chunks,mode) {
+            function append_line(pool,line,chunks,times,mode) {
                 if(!line) return;
                 var line_elem=document.createElement('p');
                 line_elem.className='line line-'+mode;
@@ -143,18 +184,30 @@
                     var chunk_elem=document.createElement('span');
                     chunk_elem.className='chunk chunk-'+mode;
                     chunk_elem.textContent=chunks[chunkid];
+                    chunk_elem.addEventListener('mousedown',function(e) {
+                        if(!e.ctrlKey) return;
+                        var t=times[chunkid];
+                        if(t!==null) {
+                            $audio_player.pause();
+                            $audio_player.currentTime=t;
+                        }
+                    });
                     line_elem.appendChild(chunk_elem);
                     pool.chunk[chunkid]=chunk_elem;
                 });
                 container.appendChild(line_elem);
             }
+            container.textContent='';
             var maxlines=Math.max(data.orig.line_src.length, data.roma.line_src.length, data.ts.line_src.length);
             for(var i=0;i<maxlines;i++) {
-                append_line(orig_pool,data.orig.line_src[i],data.orig.chunk_src,'orig');
-                append_line(roma_pool,data.roma.line_src[i],data.roma.chunk_src,'roma');
-                append_line(ts_pool,data.ts.line_src[i],data.ts.chunk_src,'ts');
-                container.appendChild(document.createElement('br'));
+                append_line(ts_pool,data.ts.line_src[i],data.ts.chunk_src,data.ts.chunk_time,'ts');
+                append_line(orig_pool,data.orig.line_src[i],data.orig.chunk_src,data.orig.chunk_time,'orig');
+                append_line(roma_pool,data.roma.line_src[i],data.roma.chunk_src,data.roma.chunk_time,'roma');
+                var splitter=document.createElement('div');
+                splitter.className='splitter';
+                container.appendChild(splitter);
             }
+            ln_times=data.orig.line_time;
             [[orig_pool,data.orig], [roma_pool,data.roma], [ts_pool,data.ts]].forEach(function(arg) {
                 var pool=arg[0];
                 var thedata=arg[1];
@@ -166,7 +219,7 @@
         }
 
         var curtime=-1;
-        function progress_time(pool,time) { // time in ms
+        function progress_time(pool_name,pool,time) { // time in ms
             while(pool.line_action[pool.line_cur][0]<=time) {
                 //console.log('line',pool.line_cur);
                 var action=pool.line_action[pool.line_cur];
@@ -174,13 +227,15 @@
                 if(elem) {
                     if(action[1]) {
                         elem.classList.add('highlight');
-                        elem.scrollIntoViewIfNeeded();
+                        if(pool_name==='orig')
+                            scroller.toTop(elem.offsetTop-5);
                     }
                     else elem.classList.remove('highlight');
                 }
                 pool.line_cur++;
             }
-            pool.tickbar.style.width = pool.line_action[pool.line_cur][2]==0 ? 0 : (((pool.line_action[pool.line_cur][0]-time)/TICKBAR_SPEED)+'px');
+            if(pool.tickbar)
+                pool.tickbar.style.width = pool.line_action[pool.line_cur][2]==0 ? 0 : (((pool.line_action[pool.line_cur][0]-time)/TICKBAR_SPEED)+'px');
             while(pool.chunk_action[pool.chunk_cur][0]<=time) {
                 //console.log('chunk',pool.chunk_cur);
                 var action=pool.chunk_action[pool.chunk_cur];
@@ -192,7 +247,7 @@
                 pool.chunk_cur++;
             }
         }
-        function progress_time_rev(pool,time) {
+        function progress_time_rev(pool_name,pool,time) {
             while(pool.line_action[pool.line_cur][0]>time) {
                 //console.log('line',pool.line_cur);
                 var action=pool.line_action[pool.line_cur];
@@ -200,7 +255,8 @@
                 if(elem) {
                     if(!action[1]) {
                         elem.classList.add('highlight');
-                        elem.scrollIntoViewIfNeeded();
+                        if(pool_name==='orig')
+                            scroller.toTop(elem.offsetTop-5);
                     }
                     else elem.classList.remove('highlight');
                 }
@@ -223,23 +279,46 @@
         function tick() {
             var time=Math.floor($audio_player.currentTime*1000)+sync;
             if(lasttime>time) { // reverse
-                progress_time_rev(orig_pool,time);
-                progress_time_rev(roma_pool,time);
-                progress_time_rev(ts_pool,time);
+                progress_time_rev('orig',orig_pool,time);
+                progress_time_rev('roma',roma_pool,time);
+                progress_time_rev('ts',ts_pool,time);
             } else {
-                progress_time(orig_pool,time);
-                progress_time(roma_pool,time);
-                progress_time(ts_pool,time);
+                progress_time('orig',orig_pool,time);
+                progress_time('roma',roma_pool,time);
+                progress_time('ts',ts_pool,time);
             }
             lasttime=time;
-            requestAnimationFrame(tick);
         }
+        
+        var raf_cnt=0;
+        function raf_callback() {
+            if(raf_cnt===0) {
+                raf_cnt=2;
+                tick();
+            } else
+                raf_cnt--;
+            requestAnimationFrame(raf_callback);
+        }
+        
+        var animation_frame_inited=false;
+        function init(songid) {        
+            fetch_json('/api/get_lyric/'+songid,function(data) {
+                orig_pool={line:[], chunk: {}, tickbar: $id('tick-bar-orig')};
+                roma_pool={line:[], chunk: {}, tickbar: null};
+                ts_pool={line:[], chunk: {}, tickbar: null};
+                inject_dom($id('lrc-container'),data);
+                if(window.opener && window.opener.hook_orig) {
+                    window.opener.hook_orig(data.orig);
+                }
+                if(!animation_frame_inited) {
+                    animation_frame_inited=true;
+                    requestAnimationFrame(raf_callback);
+                }
+            });
+        }
+        init({{ songid }});
 
-        fetch_json('{{ url_for('api_get_lyric',songid=songid) }}',function(data) {
-            inject_dom($id('lrc-container'),data);
-            requestAnimationFrame(tick);
-        });
-
+        /*
         $id('audio-select').addEventListener('change',function(e) {
             var file=e.target.files[0];
             $audio_player.setAttribute('src',URL.createObjectURL(file));
@@ -257,6 +336,62 @@
                 else
                     document.body.classList.add('should-hidden-'+cls);
             })
+        });
+        */
+        
+        var ln_times=[];
+        function key_handler(k) {
+            if(k==='[') $audio_player.currentTime-=1;
+            else if(k===']') $audio_player.currentTime+=1;
+            else if(k==='-') $audio_player.currentTime-=.15;
+            else if(k==='=') $audio_player.currentTime+=.15;
+            else if(k==='0') {
+                $audio_player.pause();
+                $audio_player.currentTime=0;
+            } else if(k==='p') {
+                if($audio_player.paused) $audio_player.play();
+                else $audio_player.pause();
+            } else if(k==='t') {
+                if(document.body.classList.contains('should-hidden-ts'))
+                    document.body.classList.remove('should-hidden-ts');
+                else
+                    document.body.classList.add('should-hidden-ts');
+            } else if(k==='r') {
+                if(document.body.classList.contains('should-hidden-roma'))
+                    document.body.classList.remove('should-hidden-roma');
+                else
+                    document.body.classList.add('should-hidden-roma');
+            } else if(k==='s') {
+                var songid=parseInt(prompt('Song ID:'));
+                if(songid)
+                    init(songid);
+            } else if(k==='j') {
+                var ln=orig_pool.line_action[orig_pool.line_cur][2];
+                console.log(ln);
+                if(ln<ln_times.length-1)
+                    $audio_player.currentTime=ln_times[ln+1]+.01;
+            } else if(k==='k') {
+                var ln=orig_pool.line_action[orig_pool.line_cur][2];
+                if(ln>0)
+                    $audio_player.currentTime=ln_times[ln-1]+.01;
+            } else if(k==='h') {
+                if(document.body.classList.contains('hide-highlight'))
+                    document.body.classList.remove('hide-highlight');
+                else
+                    document.body.classList.add('hide-highlight');
+            } else if(k==='d') {
+                if(document.body.classList.contains('hide-all'))
+                    document.body.classList.remove('hide-all');
+                else {
+                    $audio_player.pause();
+                    document.body.classList.add('hide-all');
+                }
+            } 
+        }
+        
+        document.addEventListener('keydown',function(e) {
+            var k=e.key.toLowerCase();
+            key_handler(k);
         });
     </script>
 </body>

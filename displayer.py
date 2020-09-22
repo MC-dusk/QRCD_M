@@ -11,10 +11,11 @@ qrc_chunk_re=re.compile(r'^(.*)\((\d+),(\d+)$')
 @app.route('/',methods=['GET','POST'])
 def search():
     if request.method=='GET':
-        return render_template('search.html')
+        return render_template('search.html',kwname='',kwsinger='')
     else:
         return render_template('search.html',
-            result=list(qrcd.query_lyric(request.form['name'],request.form['singer']))
+            result=list(qrcd.query_lyric(request.form['name'],request.form['singer'])),
+            kwname=request.form['name'],kwsinger=request.form['singer'],
         )
 
 @app.route('/play/<int:songid>')
@@ -32,11 +33,16 @@ def api_get_lyric(songid):
         chunk_src=[]
         line_action=[]
         chunk_action=[]
+        chunk_time=[]
+        line_time=[]
 
         def apply_chunk(data,time_s,dt):
+            if data=='//':
+                return
             chunkid=len(chunk_src)
             line_src[-1].append(chunkid)
             chunk_src.append(data)
+            chunk_time.append(time_s/1000 if time_s is not None else None)
             if time_s is not None:
                 chunk_action.append([time_s,True,chunkid])
                 chunk_action.append([time_s+dt,False,chunkid])
@@ -47,6 +53,8 @@ def api_get_lyric(songid):
         chunk_action.append([-INF,False,0])
         chunk_action.append([INF,True,0])
         chunk_src.append(None)
+        chunk_time.append(0)
+        line_time.append(0)
 
         for line_s in data.split('\n'):
             line=qrc_line_re.match(line_s)
@@ -59,6 +67,7 @@ def api_get_lyric(songid):
             dt=int(dt)
             lineid=len(line_src)
             line_src.append([])
+            line_time.append(time_s/1000)
 
             line_action.append([time_s,True,lineid])
             line_action.append([time_s+dt,False,lineid])
@@ -87,12 +96,40 @@ def api_get_lyric(songid):
             'chunk_src': chunk_src,
             'line_action': line_action,
             'chunk_action': chunk_action,
+            'chunk_time': chunk_time,
+            'line_time': line_time,
         }
 
     return jsonify(
         orig=parse_qrc(lrc['orig']),
         roma=parse_qrc(lrc['roma']),
         ts=parse_qrc(lrc['ts']),
+    )
+
+@app.route('/down_lyric/orig/<int:songid>')
+def down_lyric_orig(songid):
+    lrc=qrcd.fetch_lyric_by_id(songid,['orig'])['orig']
+    
+    line_re=re.compile(r'^\[(\d+),\d+\](.*)$')
+    repl_re=re.compile(r'\(\d+,\d+\)')
+    
+    out=''
+    
+    def format_time(ts):
+        return f'{ts//60000}:{(ts//1000)%60:02d}.{ts%1000:03d}'
+    
+    for line in lrc.splitlines():
+        line_res=line_re.match(line)
+        if not line_res:
+            print('ignoring line',line)
+            continue
+        start_ts,content=line_res.groups()
+        content=repl_re.sub('',content)
+        out+=f'[{format_time(int(start_ts))}]{content}\n'
+
+    return Response(
+        out,
+        mimetype='text/plain',
     )
 
 app.run('0.0.0.0',80)

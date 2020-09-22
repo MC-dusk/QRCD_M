@@ -3,46 +3,113 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
     <title>Search</title>
+    <style>
+        #hook-container>div {
+            margin: .2em 0;
+        }
+        #hook-container span:hover {
+            background-color: #ddd;
+        }
+    </style>
 </head>
 <body>
     <form action="?" method="post">
         <p>
             <label>
                 Title
-                <input name="name">
+                <input name="name" value="{{ kwname }}">
             </label>
         </p>
         <p>
             <label>
                 Artist
-                <input name="singer">
+                <input name="singer" value="{{ kwsinger }}">
             </label>
         </p>
         <p>
             <button type="submit">Search</button>
+            <button type="button" onclick="manual_open()">Manual</button>
         </p>
     </form>
     {% if result %}
         <table border="1">
         <thead>
             <tr>
-                <th>ID</th>
+                <th>Action</th>
                 <th>Title</th>
                 <th>Artist</th>
                 <th>Album</th>
+                <th>ID</th>
             </tr>
         </thead>
         <tbody>
             {% for item in result %}
                 <tr>
-                    <td><a href="{{ url_for('play',songid=item.songid) }}">{{ item.songid }}</a></td>
-                    <td>{{ item.name }}</td>
-                    <td>{{ item.singer }}</td>
-                    <td>{{ item.album }}</td>
+                    <td>
+                        <a href="javascript:open_player({{ item.songid }})">Open Player</a>
+                        <a href="{{ url_for('down_lyric_orig',songid=item.songid) }}">LRC</a>
+                    </td>
+                    <td>{{ item.name | replace('+',' ') }}</td>
+                    <td>{{ item.singer | replace('+',' ') }}</td>
+                    <td>{{ item.album | replace('+',' ') }}</td>
+                    <td>{{ item.songid }}</td>
                 </tr>
             {% endfor %}
         </tbody>
         </table>
     {% endif %}
+    <div id="hook-container"></div>
+    <script>
+    function $id(id) {
+        return document.getElementById(id);
+    }
+        
+    var subwin=null;
+    function open_player(songid) {
+        subwin=window.open('/play/'+songid,'qrcd-player','menubar=no,height=200,width=400');
+    }
+    
+    document.addEventListener('keydown',function(e) {
+        if(['a','button','input'].indexOf(e.target.tagName.toLowerCase())===-1) {
+            var k=e.key.toLowerCase();
+            if(k==='s')
+                manual_open();
+            else if(subwin) {
+                console.log('forwarding key',k);
+                subwin.key_handler(k);
+            }
+        }
+    });
+    
+    function manual_open() {
+        var songid=parseInt(prompt('Song ID:'));
+        if(songid)
+            open_player(songid);
+    }
+    
+    function hook_orig(pool) {
+        console.log(pool);
+        $container=$id('hook-container');
+        $container.textContent='';
+        
+        pool.line_src.forEach(function(ln) {
+            var $line=document.createElement('div');
+            ln.forEach(function(chkid) {
+                var $elem=document.createElement('span');
+                $elem.textContent=pool.chunk_src[chkid];
+                $elem.addEventListener('mousedown',function(e) {
+                    if(!e.ctrlKey) return;
+                    if(!subwin) return;
+                    var time=pool.chunk_time[chkid];
+                    console.log('forwarding time',time);
+                    subwin.$audio_player.pause();
+                    subwin.$audio_player.currentTime=time;
+                })
+                $line.appendChild($elem);
+            });
+            $container.appendChild($line);
+        });
+    }
+    </script>
 </body>
 </html>

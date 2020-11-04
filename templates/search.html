@@ -10,6 +10,13 @@
         #hook-container span:hover {
             background-color: #ddd;
         }
+        #announcement-area {
+            width: 100%;
+            height: 4em;
+        }
+        .line-roma {
+            color: #00a;
+        }
     </style>
 </head>
 <body>
@@ -58,6 +65,7 @@
         </tbody>
         </table>
     {% endif %}
+    <textarea id="announcement-area"></textarea>
     <div id="hook-container"></div>
     <script>
     function $id(id) {
@@ -70,7 +78,7 @@
     }
     
     document.addEventListener('keydown',function(e) {
-        if(['a','button','input'].indexOf(e.target.tagName.toLowerCase())===-1) {
+        if(['a','button','input','textarea'].indexOf(e.target.tagName.toLowerCase())===-1) {
             var k=e.key.toLowerCase();
             if(k==='s')
                 manual_open();
@@ -87,13 +95,14 @@
             open_player(songid);
     }
     
-    function hook_orig(pool) {
-        console.log(pool);
+    function hook_orig(pool_orig,pool_roma) {
+        console.log(pool_orig,pool_roma);
         $container=$id('hook-container');
         $container.textContent='';
         
-        pool.line_src.forEach(function(ln) {
+        function each_line(ln,pool,cls) {
             var $line=document.createElement('div');
+            $line.className=cls;
             ln.forEach(function(chkid) {
                 var $elem=document.createElement('span');
                 $elem.textContent=pool.chunk_src[chkid];
@@ -108,8 +117,21 @@
                 $line.appendChild($elem);
             });
             $container.appendChild($line);
-        });
+        }
+        
+        for(var i=0;i<pool_orig.line_src.length;i++) {
+            var ln_orig=pool_orig.line_src[i];
+            var ln_roma=pool_roma.line_src[i];
+            each_line(ln_orig,pool_orig,'line-orig');
+            each_line(ln_roma,pool_roma,'line-roma');
+        }
     }
+    
+    $id('announcement-area').addEventListener('keydown', function(e) {
+        if(e.ctrlKey && e.key.toLowerCase()=='enter' && subwin) {
+            subwin.set_announcement(e.target.value);
+        }
+    })
     </script>
 </body>
 </html>

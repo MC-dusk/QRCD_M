@@ -9,14 +9,19 @@
             margin: 0 10px 10em 100px;
             background-color: black;
             color: white;
-            transition: opacity 150ms;
+        }
+        h1,h2,h3,h4,h5,h6,p {
+            margin: 0;
         }
         ::-webkit-scrollbar {
             display: none;
         }
         
-        body.hide-all {
+        body.hide-all>:not(#announce-container) {
             opacity: 0;
+        }
+        body>* {
+            transition: opacity 150ms;
         }
     
         .line {
@@ -67,7 +72,9 @@
             background-color: #ddd;
             color: black;
         }
-        .line-ts.highlight, .line-orig.highlight {
+        .line-ts.highlight,
+        body:not(.orig-timing-bypass) .line-orig.highlight,
+        body.orig-timing-bypass .line-ts.highlight+.line-orig {
             font-size: 1.1em;
         }
         .line-roma.highlight {
@@ -75,6 +82,9 @@
         }
         body:not(.hide-highlight) .chunk.highlight {
             background-color: #540;
+        }
+        body.orig-timing-bypass .chunk-orig.highlight {
+            background-color: unset;
         }
         
         #ctrl-box {
@@ -85,66 +95,52 @@
             background-color: #eee;
             vertical-align: middle;
         }
-        #ctrl-box label, #ctrl-box audio {
-            vertical-align: middle;
-        }
-        #ctrl-box audio {
-            width: calc(100% - 300px);
-        }
-        #sync-value {
-            display: inline-block;
-            width: 40px;
-            text-align: right;
-        }
-        #sync-slider {
-            width: 100px;
-        }
-        
         #tick-bar-box {
-            height: 0;
+            height: 10px;
+            background-color: black;
             z-index: 1;
         }
         .tick-bar {
             position: fixed;
             top: 0;
             right: 10px;
-            background-color: #c55;
+            background-color: #a44;
             pointer-events: none;
-            height: 5px;
+            height: 10px;
             width: 0;
         }
         body.hide-highlight .tick-bar {
             visibility: hidden;
         }
+        
+        #announce-container {
+            position: fixed;
+            padding: .25rem;
+            left: calc(100px);
+            bottom: 0;
+            text-shadow: 0 0 2px black, 0 0 3px black, 0 0 5px black;
+            background-color: rgba(0,0,0,.4);
+            color: yellow;
+            word-break: break-all;
+            white-space: break-spaces;
+        }
+        body.hide-all #announce-container {
+            width: calc(100% - 120px);
+            text-align: center;
+            top: 0;
+            bottom: unset;
+        }
     </style>
 </head>
 <body class="hide-all">
-    <!--<p>
-        <a href="{{ url_for('search') }}"><< Back</a>
-        <input id="audio-select" type="file">
-    </p>-->
     <div id="ctrl-box">
         <div id="tick-bar-box">
             <div class="tick-bar" id="tick-bar-orig"></div>
-            <!--<div class="tick-bar" id="tick-bar-roma"></div>
-            <div class="tick-bar" id="tick-bar-ts"></div>-->
         </div>
         <audio id="audio-player" src="/static/mute.mp3"></audio>
-        <!--<label>
-            <span id="sync-value">0</span>
-            <input id="sync-slider" type="range" min="-1000" max="1000" value="0">
-        </label>-->
-        <!--<label>
-            <input data-display_toggle="orig" type="checkbox" checked>原
-        </label>
-        <label>
-            <input data-display_toggle="roma" type="checkbox" checked>音
-        </label>
-        <label>
-            <input data-display_toggle="ts" type="checkbox" checked>译
-        </label>-->
     </div>
     <div id="lrc-container"></div>
+    <div id="announce-container"></div>
 
     <script src="/static/sweet-scroll.min.js"></script>
     <script>
@@ -165,14 +161,14 @@
         });
 
         var $audio_player=$id('audio-player');
-        //var $sync_slider=$id('sync-slider');
-        //var $sync_value=$id('sync-value');
 
         var TICKBAR_SPEED=20;
         
         var orig_pool={line:[], chunk: {}, tickbar: $id('tick-bar-orig')};
         var roma_pool={line:[], chunk: {}, tickbar: null};
         var ts_pool={line:[], chunk: {}, tickbar: null};
+
+        var orig_timing_bypass=false;
 
         function inject_dom(container,data) {
             function append_line(pool,line,chunks,times,mode) {
@@ -207,7 +203,8 @@
                 splitter.className='splitter';
                 container.appendChild(splitter);
             }
-            ln_times=data.orig.line_time;
+            ln_times.orig=data.orig.line_time;
+            ln_times.ts=data.ts.line_time;
             [[orig_pool,data.orig], [roma_pool,data.roma], [ts_pool,data.ts]].forEach(function(arg) {
                 var pool=arg[0];
                 var thedata=arg[1];
@@ -216,6 +213,10 @@
                 pool.line_cur=0;
                 pool.chunk_cur=0;
             })
+        }
+        
+        function set_announcement(html) {
+            $id('announce-container').innerHTML=html;
         }
 
         var curtime=-1;
@@ -227,15 +228,16 @@
                 if(elem) {
                     if(action[1]) {
                         elem.classList.add('highlight');
-                        if(pool_name==='orig')
-                            scroller.toTop(elem.offsetTop-5);
+                        if(pool_name===(orig_timing_bypass?'ts':'orig'))
+                            scroller.toTop(elem.offsetTop-14);
                     }
                     else elem.classList.remove('highlight');
                 }
                 pool.line_cur++;
             }
-            if(pool.tickbar)
+            if(pool.tickbar && pool_name===(orig_timing_bypass?'ts':'orig')) {
                 pool.tickbar.style.width = pool.line_action[pool.line_cur][2]==0 ? 0 : (((pool.line_action[pool.line_cur][0]-time)/TICKBAR_SPEED)+'px');
+            }
             while(pool.chunk_action[pool.chunk_cur][0]<=time) {
                 //console.log('chunk',pool.chunk_cur);
                 var action=pool.chunk_action[pool.chunk_cur];
@@ -255,8 +257,8 @@
                 if(elem) {
                     if(!action[1]) {
                         elem.classList.add('highlight');
-                        if(pool_name==='orig')
-                            scroller.toTop(elem.offsetTop-5);
+                        if(pool_name===(orig_timing_bypass?'ts':'orig'))
+                            scroller.toTop(elem.offsetTop-14);
                     }
                     else elem.classList.remove('highlight');
                 }
@@ -303,12 +305,13 @@
         var animation_frame_inited=false;
         function init(songid) {        
             fetch_json('/api/get_lyric/'+songid,function(data) {
-                orig_pool={line:[], chunk: {}, tickbar: $id('tick-bar-orig')};
-                roma_pool={line:[], chunk: {}, tickbar: null};
-                ts_pool={line:[], chunk: {}, tickbar: null};
+                var tickbar=$id('tick-bar-orig');
+                orig_pool={line:[], chunk: {}, tickbar: tickbar};
+                roma_pool={line:[], chunk: {}, tickbar: tickbar};
+                ts_pool={line:[], chunk: {}, tickbar: tickbar};
                 inject_dom($id('lrc-container'),data);
                 if(window.opener && window.opener.hook_orig) {
-                    window.opener.hook_orig(data.orig);
+                    window.opener.hook_orig(data.orig,data.roma);
                 }
                 if(!animation_frame_inited) {
                     animation_frame_inited=true;
@@ -318,28 +321,7 @@
         }
         init({{ songid }});
 
-        /*
-        $id('audio-select').addEventListener('change',function(e) {
-            var file=e.target.files[0];
-            $audio_player.setAttribute('src',URL.createObjectURL(file));
-        });
-
-        $sync_slider.addEventListener('input',function() {
-            sync=parseInt($sync_slider.value);
-            $sync_value.textContent=sync;
-        });
-        [].slice.call(document.querySelectorAll('[data-display_toggle]')).forEach(function(elem) {
-            var cls=elem.dataset['display_toggle'];
-            elem.addEventListener('click', function() {
-                if(elem.checked)
-                    document.body.classList.remove('should-hidden-'+cls);
-                else
-                    document.body.classList.add('should-hidden-'+cls);
-            })
-        });
-        */
-        
-        var ln_times=[];
+        var ln_times={orig:[], ts:[]};
         function key_handler(k) {
             if(k==='[') $audio_player.currentTime-=1;
             else if(k===']') $audio_player.currentTime+=1;
@@ -366,14 +348,15 @@
                 if(songid)
                     init(songid);
             } else if(k==='j') {
-                var ln=orig_pool.line_action[orig_pool.line_cur][2];
-                console.log(ln);
-                if(ln<ln_times.length-1)
-                    $audio_player.currentTime=ln_times[ln+1]+.01;
+                var pool_name=(orig_timing_bypass?'ts':'orig');
+                var ln=window[pool_name+'_pool'].line_action[orig_pool.line_cur][2];
+                if(ln<ln_times[pool_name].length-1)
+                    $audio_player.currentTime=ln_times[pool_name][ln+1]+.01;
             } else if(k==='k') {
-                var ln=orig_pool.line_action[orig_pool.line_cur][2];
+                var pool_name=(orig_timing_bypass?'ts':'orig');
+                var ln=window[pool_name+'_pool'].line_action[orig_pool.line_cur][2];
                 if(ln>0)
-                    $audio_player.currentTime=ln_times[ln-1]+.01;
+                    $audio_player.currentTime=ln_times[pool_name][ln-1]+.01;
             } else if(k==='h') {
                 if(document.body.classList.contains('hide-highlight'))
                     document.body.classList.remove('hide-highlight');
@@ -386,7 +369,13 @@
                     $audio_player.pause();
                     document.body.classList.add('hide-all');
                 }
-            } 
+            } else if(k==='o') {
+                window.orig_timing_bypass=!orig_timing_bypass;
+                if(orig_timing_bypass)
+                    document.body.classList.add('orig-timing-bypass');
+                else
+                    document.body.classList.remove('orig-timing-bypass');
+            }
         }
         
         document.addEventListener('keydown',function(e) {

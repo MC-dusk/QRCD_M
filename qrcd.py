@@ -17,7 +17,11 @@ def qrc_decode(data):
     if stderr:
         raise RuntimeError(stderr.decode(errors='ignore'))
     data=binascii.unhexlify(stdout.strip())
-    return zlib.decompress(data)
+    try:
+        return zlib.decompress(data)
+    except Exception as e:
+        print('!! decode error',type(e),e)
+        return b''
     
 def query_lyric(name,singer):
     res=requests.get('https://c.y.qq.com/lyric/fcgi-bin/fcg_search_pc_lrc.fcg',params=dict(

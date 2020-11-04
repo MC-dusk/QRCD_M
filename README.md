@@ -32,7 +32,15 @@ Click on `Open Player` to open popup window for current search result. (Note tha
 - <kbd>H</kbd> Toggle highlighting
 - <kbd>D</kbd> Toggle global display (and pause)
 - <kbd>S</kbd> Change song by ID
+- <kbd>O</kbd> Toggle disabling original lyrics timing (use translated timing instead)
 
 **Mouse controlling: (both control window and popup window)**
 
 - <kbd>Ctrl</kbd>+Click to pause at selection
+
+**Announcement:**
+
+- Type HTML in control window and <kbd>Ctrl+Enter</kbd>
+
+
+

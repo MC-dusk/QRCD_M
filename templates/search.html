@@ -5,7 +5,7 @@
     <title>Search</title>
     <style>
         #hook-container>div {
-            margin: .2em 0;
+            margin: .3em 0;
         }
         #hook-container span:hover {
             background-color: #ddd;
@@ -16,6 +16,10 @@
         }
         .line-roma {
             color: #00a;
+        }
+        .line-timestamp {
+            margin-right: 1em;
+            opacity: .5;
         }
     </style>
 </head>
@@ -95,6 +99,10 @@
             open_player(songid);
     }
     
+    function fix2(x) {
+        return x<10 ? ('0'+x) : (''+x);
+    }
+    
     function hook_orig(pool_orig,pool_roma) {
         console.log(pool_orig,pool_roma);
         $container=$id('hook-container');
@@ -103,6 +111,20 @@
         function each_line(ln,pool,cls) {
             var $line=document.createElement('div');
             $line.className=cls;
+            if(ln.length) {
+                var $stamp=document.createElement('span');
+                var time=pool.chunk_time[ln[0]];
+                $stamp.textContent=` (${parseInt(time/60)}:${fix2(parseInt(time%60))})`;
+                $stamp.addEventListener('mousedown',function(e) {
+                    if(!e.ctrlKey) return;
+                    if(!subwin) return;
+                    console.log('forwarding time',time);
+                    subwin.$audio_player.pause();
+                    subwin.$audio_player.currentTime=time;
+                });
+                $stamp.className='line-timestamp';
+                $line.appendChild($stamp);
+            }
             ln.forEach(function(chkid) {
                 var $elem=document.createElement('span');
                 $elem.textContent=pool.chunk_src[chkid];
@@ -113,7 +135,7 @@
                     console.log('forwarding time',time);
                     subwin.$audio_player.pause();
                     subwin.$audio_player.currentTime=time;
-                })
+                });
                 $line.appendChild($elem);
             });
             $container.appendChild($line);
@@ -123,7 +145,8 @@
             var ln_orig=pool_orig.line_src[i];
             var ln_roma=pool_roma.line_src[i];
             each_line(ln_orig,pool_orig,'line-orig');
-            each_line(ln_roma,pool_roma,'line-roma');
+            if(ln_roma)
+                each_line(ln_roma,pool_roma,'line-roma');
         }
     }
     

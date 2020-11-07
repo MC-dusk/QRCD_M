@@ -8,14 +8,20 @@ app.debug=True
 qrc_line_re=re.compile(r'^\[(\d+),(\d+)\](.*)$')
 qrc_chunk_re=re.compile(r'^(.*)\((\d+),(\d+)$')
 
-@app.route('/',methods=['GET','POST'])
+@app.route('/')
 def search():
-    if request.method=='GET':
-        return render_template('search.html',kwname='',kwsinger='')
+    return render_template('search.html')
+    
+@app.route('/api/search',methods=['POST'])
+def api_search():
+    json=request.json
+    try:
+        res=list(qrcd.query_lyric(json['name'],json['singer']))
+    except Exception as e:
+        return f'{type(e)} {e}'
     else:
-        return render_template('search.html',
-            result=list(qrcd.query_lyric(request.form['name'],request.form['singer'])),
-            kwname=request.form['name'],kwsinger=request.form['singer'],
+        return render_template('result_widget.html',
+            result=res,
         )
 
 @app.route('/play/<int:songid>')

@@ -115,7 +115,6 @@
         
         #announce-container {
             position: fixed;
-            padding: .25rem;
             left: calc(100px);
             bottom: 0;
             text-shadow: 0 0 2px black, 0 0 3px black, 0 0 5px black;
@@ -129,6 +128,9 @@
             text-align: center;
             top: 0;
             bottom: unset;
+        }
+        #announce-container:not(:empty) {
+            padding: .25rem;
         }
     </style>
 </head>

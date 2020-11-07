@@ -24,17 +24,17 @@
     </style>
 </head>
 <body>
-    <form action="?" method="post">
+    <form id="search-form">
         <p>
             <label>
                 Title
-                <input name="name" value="{{ kwname }}">
+                <input id="search-name">
             </label>
         </p>
         <p>
             <label>
                 Artist
-                <input name="singer" value="{{ kwsinger }}">
+                <input id="search-singer">
             </label>
         </p>
         <p>
@@ -42,35 +42,12 @@
             <button type="button" onclick="manual_open()">Manual</button>
         </p>
     </form>
-    {% if result %}
-        <table border="1">
-        <thead>
-            <tr>
-                <th>Action</th>
-                <th>Title</th>
-                <th>Artist</th>
-                <th>Album</th>
-                <th>ID</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for item in result %}
-                <tr>
-                    <td>
-                        <a href="javascript:open_player({{ item.songid }})">Open Player</a>
-                        <a href="{{ url_for('down_lyric_orig',songid=item.songid) }}">LRC</a>
-                    </td>
-                    <td>{{ item.name | replace('+',' ') }}</td>
-                    <td>{{ item.singer | replace('+',' ') }}</td>
-                    <td>{{ item.album | replace('+',' ') }}</td>
-                    <td>{{ item.songid }}</td>
-                </tr>
-            {% endfor %}
-        </tbody>
-        </table>
-    {% endif %}
+    <div id="result-widget-root">(search result here)</div>
+    <hr>
     <textarea id="announcement-area"></textarea>
+    <hr>
     <div id="hook-container"></div>
+    
     <script>
     function $id(id) {
         return document.getElementById(id);
@@ -80,6 +57,30 @@
     function open_player(songid) {
         subwin=window.open('/play/'+songid,'qrcd-player','menubar=no,height=200,width=400');
     }
+    
+    var $result_widget=$id('result-widget-root');
+    
+    $id('search-form').addEventListener('submit',function(e) {
+        e.preventDefault();
+        $result_widget.innerHTML='searching...';
+        fetch('/api/search', {
+            method: 'post',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                name: $id('search-name').value,
+                singer: $id('search-singer').value,
+            }),
+        })
+            .then((res)=>res.text())
+            .then((t)=>{
+                $result_widget.innerHTML=t;
+            })
+            .catch((e)=>{
+                $result_widget.textContent='search failed: '+e;
+            });
+    });
     
     document.addEventListener('keydown',function(e) {
         if(['a','button','input','textarea'].indexOf(e.target.tagName.toLowerCase())===-1) {

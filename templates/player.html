@@ -78,7 +78,7 @@
             font-size: 1.1em;
         }
         .line-roma.highlight {
-            font-size: .8em;
+            font-size: .83em;
         }
         body:not(.hide-highlight) .chunk.highlight {
             background-color: #540;
@@ -102,11 +102,11 @@
         }
         .tick-bar {
             position: fixed;
-            top: 0;
+            top: 7px;
             right: 10px;
-            background-color: #a44;
+            background-color: #733;
             pointer-events: none;
-            height: 10px;
+            height: 3px;
             width: 0;
         }
         body.hide-highlight .tick-bar {
@@ -119,15 +119,13 @@
             bottom: 0;
             text-shadow: 0 0 2px black, 0 0 3px black, 0 0 5px black;
             background-color: rgba(0,0,0,.4);
-            color: yellow;
             word-break: break-all;
             white-space: break-spaces;
         }
         body.hide-all #announce-container {
             width: calc(100% - 120px);
             text-align: center;
-            top: 0;
-            bottom: unset;
+            bottom: 0;
         }
         #announce-container:not(:empty) {
             padding: .25rem;

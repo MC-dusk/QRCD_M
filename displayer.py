@@ -1,9 +1,12 @@
 import qrcd
 import re
 from flask import *
+from flask_socketio import SocketIO, emit
 
 app=Flask(__name__)
 app.debug=True
+
+sio=SocketIO(app)
 
 qrc_line_re=re.compile(r'^\[(\d+),(\d+)\](.*)$')
 qrc_chunk_re=re.compile(r'^(.*)\((\d+),(\d+)$')
@@ -24,9 +27,9 @@ def api_search():
             result=res,
         )
 
-@app.route('/play/<int:songid>')
-def play(songid):
-    return render_template('player.html',songid=songid)
+@app.route('/player')
+def player():
+    return render_template('player.html')
 
 @app.route('/api/get_lyric/<int:songid>')
 def api_get_lyric(songid):
@@ -138,4 +141,12 @@ def down_lyric_orig(songid):
         mimetype='text/plain',
     )
 
-app.run('0.0.0.0',80)
+@sio.on('master_update')
+def sio_master_update(msg):
+    emit('master_update',msg,broadcast=True,include_self=False)
+    
+@sio.on('slave_update')
+def sio_slave_update(msg):
+    emit('slave_update',msg,broadcast=True,include_self=False)
+
+sio.run(app,'0.0.0.0',80)

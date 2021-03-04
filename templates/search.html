@@ -39,7 +39,7 @@
         </p>
         <p>
             <button type="submit">Search</button>
-            <button type="button" onclick="manual_open()">Manual</button>
+            <button type="button" onclick="open_player()">Open Player</button>
         </p>
     </form>
     <div id="result-widget-root">(search result here)</div>
@@ -48,14 +48,15 @@
     <hr>
     <div id="hook-container"></div>
     
+    <script src="/static/socket.io.js"></script>
     <script>
     function $id(id) {
         return document.getElementById(id);
-    }
-        
-    var subwin=null;
-    function open_player(songid) {
-        subwin=window.open('/play/'+songid,'qrcd-player','menubar=no,height=200,width=400');
+    }    
+    var socket=io();
+    
+    function open_player() {
+        window.open('/player','qrcd-player','menubar=no,height=200,width=400');
     }
     
     var $result_widget=$id('result-widget-root');
@@ -85,19 +86,26 @@
     document.addEventListener('keydown',function(e) {
         if(['a','button','input','textarea'].indexOf(e.target.tagName.toLowerCase())===-1) {
             var k=e.key.toLowerCase();
-            if(k==='s')
-                manual_open();
-            else if(subwin) {
+            if(k=='s')
+                select_songid(parseInt(prompt('Song ID:')));
+            else if(k!='control') {
                 console.log('forwarding key',k);
-                subwin.key_handler(k);
+                socket.emit('master_update', {
+                    type: 'keypress',
+                    key: k,
+                });
+                //subwin.key_handler(k);
             }
         }
     });
     
-    function manual_open() {
-        var songid=parseInt(prompt('Song ID:'));
-        if(songid)
-            open_player(songid);
+    function select_songid(songid) {
+        if(songid) {
+            socket.emit('master_update', {
+                type: 'init_song',
+                songid: songid,
+            });
+        }
     }
     
     function fix2(x) {
@@ -118,10 +126,13 @@
                 $stamp.textContent=` (${parseInt(time/60)}:${fix2(parseInt(time%60))})`;
                 $stamp.addEventListener('mousedown',function(e) {
                     if(!e.ctrlKey) return;
-                    if(!subwin) return;
                     console.log('forwarding time',time);
-                    subwin.$audio_player.pause();
-                    subwin.$audio_player.currentTime=time;
+                    socket.emit('master_update', {
+                        type: 'seek',
+                        time: time,
+                    });
+                    //subwin.$audio_player.pause();
+                    //subwin.$audio_player.currentTime=time;
                 });
                 $stamp.className='line-timestamp';
                 $line.appendChild($stamp);
@@ -131,11 +142,14 @@
                 $elem.textContent=pool.chunk_src[chkid];
                 $elem.addEventListener('mousedown',function(e) {
                     if(!e.ctrlKey) return;
-                    if(!subwin) return;
                     var time=pool.chunk_time[chkid];
                     console.log('forwarding time',time);
-                    subwin.$audio_player.pause();
-                    subwin.$audio_player.currentTime=time;
+                    socket.emit('master_update', {
+                        type: 'seek',
+                        time: time,
+                    });
+                    //subwin.$audio_player.pause();
+                    //subwin.$audio_player.currentTime=time;
                 });
                 $line.appendChild($elem);
             });
@@ -152,10 +166,22 @@
     }
     
     $id('announcement-area').addEventListener('keydown', function(e) {
-        if(e.ctrlKey && e.key.toLowerCase()=='enter' && subwin) {
-            subwin.set_announcement(e.target.value);
+        if(e.ctrlKey && e.key.toLowerCase()=='enter') {
+            socket.emit('master_update', {
+                type: 'set_announcement',
+                html: e.target.value,
+            });
+            //subwin.set_announcement(e.target.value);
         }
-    })
+    });
+    
+    socket.on('slave_update',function(req) {
+        if(req.type=='hook_onload') {
+            hook_orig(req.data_orig,req.data_roma);
+        } else {
+            console.log('unknown sio req',req);
+        }
+    });
     </script>
 </body>
 </html>

@@ -6,9 +6,13 @@
     <style>
         body {
             cursor: cell;
-            margin: 0 10px 10em 100px;
+            margin: 0 10px 10em 10px;
             background-color: black;
             color: white;
+            text-shadow: 0 0 2px black, 0 0 3px black;
+            
+            -webkit-app-region: drag;
+            -webkit-user-select: none;
         }
         h1,h2,h3,h4,h5,h6,p {
             margin: 0;
@@ -71,6 +75,7 @@
         .chunk:hover:not(.highlight) {
             background-color: #ddd;
             color: black;
+            text-shadow: none;
         }
         .line-ts.highlight,
         body:not(.orig-timing-bypass) .line-orig.highlight,
@@ -115,7 +120,7 @@
         
         #announce-container {
             position: fixed;
-            left: calc(100px);
+            left: 10px;
             bottom: 0;
             text-shadow: 0 0 2px black, 0 0 3px black, 0 0 5px black;
             background-color: rgba(0,0,0,.4);
@@ -123,7 +128,7 @@
             white-space: break-spaces;
         }
         body.hide-all #announce-container {
-            width: calc(100% - 120px);
+            width: calc(100% - 20px);
             text-align: center;
             bottom: 0;
         }
@@ -143,6 +148,7 @@
     <div id="announce-container"></div>
 
     <script src="/static/sweet-scroll.min.js"></script>
+    <script src="/static/socket.io.js"></script>
     <script>
         function $id(id) {
             return document.getElementById(id);
@@ -155,6 +161,7 @@
             };
             xhr.send();
         }
+        var socket=io();
         
         var scroller = new SweetScroll({
             duration: 300,
@@ -310,16 +317,18 @@
                 roma_pool={line:[], chunk: {}, tickbar: tickbar};
                 ts_pool={line:[], chunk: {}, tickbar: tickbar};
                 inject_dom($id('lrc-container'),data);
-                if(window.opener && window.opener.hook_orig) {
-                    window.opener.hook_orig(data.orig,data.roma);
-                }
+                socket.emit('slave_update',{
+                    type: 'hook_onload',
+                    data_orig: data.orig,
+                    data_roma: data.roma,
+                });
+                //window.opener.hook_orig(data.orig,data.roma);
                 if(!animation_frame_inited) {
                     animation_frame_inited=true;
                     requestAnimationFrame(raf_callback);
                 }
             });
         }
-        init({{ songid }});
 
         var ln_times={orig:[], ts:[]};
         function key_handler(k) {
@@ -381,6 +390,21 @@
         document.addEventListener('keydown',function(e) {
             var k=e.key.toLowerCase();
             key_handler(k);
+        });
+        
+        socket.on('master_update',function(req) {
+            if(req.type=='init_song') {
+                init(req.songid);
+            } else if(req.type=='keypress') {
+                key_handler(req.key);
+            } else if(req.type=='seek') {
+                $audio_player.pause();
+                $audio_player.currentTime=req.time;
+            } else if(req.type=='set_announcement') {
+                set_announcement(req.html);
+            } else {
+                console.log('unknown sio req',req);
+            }
         });
     </script>
 </body>

@@ -12,7 +12,7 @@ lrc_line_re=re.compile(r'^\[(\d+:\d+(?:\.\d+)?)\](.*)$')
 
 def qrc_decode(data):
     data=binascii.hexlify(data)
-    p=subprocess.Popen('decoder.exe',stdin=subprocess.PIPE,stdout=subprocess.PIPE)
+    p=subprocess.Popen('lib_qrc_decoder.exe',stdin=subprocess.PIPE,stdout=subprocess.PIPE)
     stdout,stderr=p.communicate(data+b'\n\n')
     if stderr:
         raise RuntimeError(stderr.decode(errors='ignore'))

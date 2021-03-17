@@ -17,6 +17,9 @@
         .line-roma {
             color: #00a;
         }
+        .line-roma>span:not(.line-timestamp)::after {
+            content: ' ';
+        }
         .line-timestamp {
             margin-right: 1em;
             opacity: .5;
@@ -84,18 +87,21 @@
     });
     
     document.addEventListener('keydown',function(e) {
-        if(['a','button','input','textarea'].indexOf(e.target.tagName.toLowerCase())===-1) {
-            var k=e.key.toLowerCase();
-            if(k=='s')
-                select_songid(parseInt(prompt('Song ID:')));
-            else if(k!='control') {
-                console.log('forwarding key',k);
-                socket.emit('master_update', {
-                    type: 'keypress',
-                    key: k,
-                });
-                //subwin.key_handler(k);
-            }
+        if(e.repeat)
+            return;
+        if(['a','button','input','textarea'].indexOf(e.target.tagName.toLowerCase())!==-1)
+            return;
+            
+        var k=e.key.toLowerCase();
+        if(k=='s')
+            select_songid(parseInt(prompt('Song ID:')));
+        else {
+            console.log('forwarding key',k);
+            socket.emit('master_update', {
+                type: 'keypress',
+                key: k,
+            });
+            //subwin.key_handler(k);
         }
     });
     
@@ -105,11 +111,17 @@
                 type: 'init_song',
                 songid: songid,
             });
+            $container=$id('hook-container');
+            $container.textContent='';
         }
     }
     
     function fix2(x) {
         return x<10 ? ('0'+x) : (''+x);
+    }
+    
+    function roma_trim(s) {
+        return /^'?(.*?)\s*$/.exec(s)[1];
     }
     
     function hook_orig(pool_orig,pool_roma) {
@@ -139,7 +151,7 @@
             }
             ln.forEach(function(chkid) {
                 var $elem=document.createElement('span');
-                $elem.textContent=pool.chunk_src[chkid];
+                $elem.textContent=(cls=='line-roma' ? roma_trim(pool.chunk_src[chkid]) : pool.chunk_src[chkid]);
                 $elem.addEventListener('mousedown',function(e) {
                     if(!e.ctrlKey) return;
                     var time=pool.chunk_time[chkid];

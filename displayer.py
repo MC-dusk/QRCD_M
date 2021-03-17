@@ -1,7 +1,9 @@
 import qrcd
 import re
+import os
 from flask import *
 from flask_socketio import SocketIO, emit
+import pickle
 
 app=Flask(__name__)
 app.debug=True
@@ -10,6 +12,8 @@ sio=SocketIO(app)
 
 qrc_line_re=re.compile(r'^\[(\d+),(\d+)\](.*)$')
 qrc_chunk_re=re.compile(r'^(.*)\((\d+),(\d+)$')
+
+CACHE_DIR='song_cache'
 
 @app.route('/')
 def search():
@@ -33,7 +37,6 @@ def player():
 
 @app.route('/api/get_lyric/<int:songid>')
 def api_get_lyric(songid):
-    lrc=qrcd.fetch_lyric_by_id(songid,['orig','roma','ts'])
 
     def parse_qrc(data):
         INF=2147483647
@@ -109,10 +112,33 @@ def api_get_lyric(songid):
             'line_time': line_time,
         }
 
+    pickle_fn=os.path.join(CACHE_DIR,'%d.pickle'%songid)
+    if os.path.isfile(pickle_fn):
+        print('loaded from cache')
+        with open(pickle_fn,'rb') as f:
+            orig,roma,ts=pickle.load(f)
+    else:
+        lrc=qrcd.fetch_lyric_by_id(songid,['orig','roma','ts'])
+        orig=parse_qrc(lrc['orig'])
+        roma=parse_qrc(lrc['roma'])
+        ts=parse_qrc(lrc['ts'])
+        print('saved into cache')
+        if os.path.isdir(CACHE_DIR):
+            with open(pickle_fn,'wb') as f:
+                pickle.dump((orig,roma,ts),f)
+    
+    for idx,line in enumerate(roma['line_src']):
+        roma_tot = ''.join(roma['chunk_src'][i] for i in line).replace(' ','')
+        orig_tot = ''.join(orig['chunk_src'][i] for i in orig['line_src'][idx]).replace(' ','')
+        if orig_tot==roma_tot:
+            print('remove dup roma:', roma_tot)
+            for i in line:
+                roma['chunk_src'][i]=''
+
     return jsonify(
-        orig=parse_qrc(lrc['orig']),
-        roma=parse_qrc(lrc['roma']),
-        ts=parse_qrc(lrc['ts']),
+        orig=orig,
+        roma=roma,
+        ts=ts,
     )
 
 @app.route('/down_lyric/orig/<int:songid>')

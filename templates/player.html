@@ -25,7 +25,7 @@
             opacity: 0;
         }
         body>* {
-            transition: opacity 150ms;
+            transition: opacity 120ms;
         }
     
         .line {
@@ -284,9 +284,12 @@
         }
 
         var lasttime=0;
-        var sync=0;
         function tick() {
-            var time=Math.floor($audio_player.currentTime*1000)+sync;
+            var time_s=$audio_player.currentTime;
+            var time=Math.floor(time_s*1000);
+            
+            document.title=Math.floor(time_s/60)+':'+(''+Math.floor(time_s%60)).padStart(2,'0');
+            
             if(lasttime>time) { // reverse
                 progress_time_rev('orig',orig_pool,time);
                 progress_time_rev('roma',roma_pool,time);
@@ -310,30 +313,53 @@
         }
         
         var animation_frame_inited=false;
-        function init(songid) {        
+        function init(songid) {
+            $audio_player.pause();
+            $audio_player.currentTime=0;
+            document.body.classList.add('hide-all');
+            set_announcement('');
+            
+            var start_time=+new Date();
+        
             fetch_json('/api/get_lyric/'+songid,function(data) {
-                var tickbar=$id('tick-bar-orig');
-                orig_pool={line:[], chunk: {}, tickbar: tickbar};
-                roma_pool={line:[], chunk: {}, tickbar: tickbar};
-                ts_pool={line:[], chunk: {}, tickbar: tickbar};
-                inject_dom($id('lrc-container'),data);
-                socket.emit('slave_update',{
-                    type: 'hook_onload',
-                    data_orig: data.orig,
-                    data_roma: data.roma,
-                });
-                //window.opener.hook_orig(data.orig,data.roma);
-                if(!animation_frame_inited) {
-                    animation_frame_inited=true;
-                    requestAnimationFrame(raf_callback);
-                }
+                var delta=start_time+100-(+new Date());
+                if(delta<0)
+                    delta=0;
+                
+                // wait for hide-all animation
+            
+                setTimeout(function() {
+                    socket.emit('slave_update',{
+                        type: 'hook_onload',
+                        data_orig: data.orig,
+                        data_roma: data.roma,
+                    });
+                    
+                    var tickbar=$id('tick-bar-orig');
+                    orig_pool={line:[], chunk: {}, tickbar: tickbar};
+                    roma_pool={line:[], chunk: {}, tickbar: tickbar};
+                    ts_pool={line:[], chunk: {}, tickbar: tickbar};
+                    
+                    document.body.classList.remove('should-hidden-ts');
+                    document.body.classList.remove('should-hidden-roma');
+                    document.body.classList.remove('hide-highlight');
+                    document.body.classList.remove('orig-timing-bypass');
+                    window.orig_timing_bypass=false;
+                    
+                    inject_dom($id('lrc-container'),data);
+                    //window.opener.hook_orig(data.orig,data.roma);
+                    if(!animation_frame_inited) {
+                        animation_frame_inited=true;
+                        requestAnimationFrame(raf_callback);
+                    }
+                }, delta);
             });
         }
 
         var ln_times={orig:[], ts:[]};
         function key_handler(k) {
-            if(k==='[') $audio_player.currentTime-=1;
-            else if(k===']') $audio_player.currentTime+=1;
+            if(k==='[') $audio_player.currentTime-=.75;
+            else if(k===']') $audio_player.currentTime+=.75;
             else if(k==='-') $audio_player.currentTime-=.15;
             else if(k==='=') $audio_player.currentTime+=.15;
             else if(k==='0') {

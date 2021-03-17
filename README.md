@@ -23,7 +23,7 @@ Click on `Open Player` to open popup window for current search result. (Note tha
 **Keyboard controlling: (both control window and popup window)**
 
 - <kbd>P</kbd> Play/Pause
-- <kbd>[</kbd> <kbd>]</kbd> Seek ±1s
+- <kbd>[</kbd> <kbd>]</kbd> Seek ±750ms
 - <kbd>-</kbd> <kbd>=</kbd> Seek ±150ms
 - <kbd>J</kbd> <kbd>K</kbd> Seek ±1line
 - <kbd>0</kbd> Pause at beginning

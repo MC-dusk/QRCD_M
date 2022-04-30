@@ -120,6 +120,7 @@ def main():
     print('Downloading...')
     res=fetch_lyric_by_id(songid,['orig','ts','roma'])
     for typ,data in res.items():
+        # directly output lrc file in lyric folder
         f=open('lyric/'+typ+'.lrc', mode='w')
         f.write(data)
         f.close()

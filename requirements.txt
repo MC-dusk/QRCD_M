@@ -1,5 +1,9 @@
+os
 requests
-beautifulsoup4
-lxml
-flask
-flask-socketio
+urllib.parse
+bs4
+binascii
+subprocess
+re
+datetime
+zlib

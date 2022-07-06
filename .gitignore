@@ -1,6 +1,0 @@
-*.xml
-*.qrc
-*.lrc
-.idea/
-__pycache__/
-/song_cache/

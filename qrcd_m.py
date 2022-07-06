@@ -1,3 +1,4 @@
+from os import mkdir
 import requests
 import urllib.parse
 from bs4 import BeautifulSoup as bs
@@ -6,6 +7,8 @@ import subprocess
 import re
 import datetime
 import zlib
+
+from sympy import content
 
 extract_xml_re=re.compile(r'<Lyric_1 LyricType="1" LyricContent="(.*?)"/>',re.DOTALL)
 lrc_line_re=re.compile(r'^\[(\d+:\d+(?:\.\d+)?)\](.*)$')
@@ -72,7 +75,7 @@ def lrc_to_dummy_qrc(data):
     for line_s in data.replace('\r','').split('\n'):
         line=lrc_line_re.match(line_s)
         if not line:
-            print('ignored LINE:',line_s)
+            # print('ignored LINE:',line_s)
             continue
             
         timestamp,content=line.groups()
@@ -107,8 +110,76 @@ def fetch_lyric_by_id(songid,requested_type):
     return ret
     # return lrc
 
+def down_lyric_line(songid):
+    for lrc_type in ['orig','roma','ts']:
+        lrc=fetch_lyric_by_id(songid,['orig','roma','ts'])[lrc_type]
+        
+        line_re=re.compile(r'^\[(\d+),\d+\](.*)$')
+        repl_re=re.compile(r'\(\d+,\d+\)')
+        
+        lrc_out=''
+        line_ign=''
+        
+        def format_time(ts):
+            # return f'{ts//60000:02d}:{(ts//1000)%60:02d}.{ts%1000:03d}'
+            return f'{ts//60000:02}:{(ts//1000)%60:02}.{ts%1000//10:02}'
+
+        for line in lrc.splitlines():
+            line_res=line_re.match(line)
+            if not line_res:
+                # print('ignoring line',line)
+                line_ign+=line+'\n'
+                continue
+            start_ts,line_out=line_res.groups()
+            line_out=repl_re.sub('',line_out)
+            lrc_out+=f'[{format_time(int(start_ts))}]{line_out}\n'
+
+            lrc_output(lrc_type,line_ign,lrc_out,'line')
+
+def down_lyric_syl(songid):
+    for lrc_type in ['orig','roma']:
+        lrc=fetch_lyric_by_id(songid,['orig','roma'])[lrc_type]
+        
+        line_re=re.compile(r'^\[(\d+),(\d+)\](.*)$')
+        syl_re=re.compile(r'(.+?)\((\d+),\d+\)')
+        
+        lrc_out=''
+        line_ign=''
+        
+        def format_time(ts):
+            # return f'{ts//60000:02}:{(ts//1000)%60:02}.{round(ts%1000/10):02}'
+            return f'{ts//60000:02}:{(ts//1000)%60:02}.{ts%1000//10:02}'
+        
+        for line in lrc.splitlines():
+            line_res=line_re.match(line)
+            if not line_res:
+                # print('ignoring line',line)
+                line_ign+=line+'\n'
+                continue
+            line_start,line_dur,line_lyric=line_res.groups()
+            syl_list=syl_re.finditer(line_lyric)
+            line_out=''
+            for syl in syl_list:
+                char,syl_start=syl.groups()
+                line_out+=f'[{format_time(int(syl_start))}]{char}'
+            line_out+=f'[{format_time(int(line_start)+int(line_dur))}]'
+            lrc_out+=f'{line_out}\n'
+
+            lrc_output(lrc_type,line_ign,lrc_out,'syl')
+
+def lrc_output(lrc_type,line_ign,lrc_out,type):
+        f=open(f'lyric/{lrc_type}_{type}_ignore.txt', mode='w', encoding='utf-8')
+        f.write(line_ign)
+        f.close()
+
+        f=open(f'lyric/{lrc_type}_{type}.lrc', mode='w', encoding='utf-8')
+        f.write(lrc_out)
+        f.close()    
+
 def main():
-    title=input('Title: ')
+    title=input('Input nothing to exit...\nTitle: ')
+    if title=='':
+        quit()
     artist=input('Artist: ')
     print('Searching...')
     songlist=list(query_lyric(title,artist))
@@ -118,12 +189,21 @@ def main():
     songid=songlist[cid]['songid']
     print('Song ID = %s'%songid)
     print('Downloading...')
-    res=fetch_lyric_by_id(songid,['orig','ts','roma'])
-    for typ,data in res.items():
-        # directly output lrc file in lyric folder
-        f=open('lyric/'+typ+'.lrc', mode='w')
-        f.write(data)
-        f.close()
+    try:
+        mkdir('./lyric')
+    except:
+        pass
+
+    # # output origin decode text
+    # res=fetch_lyric_by_id(songid,['orig','ts','roma'])
+    # for typ,data in res.items():
+    #     f=open('lyric/'+typ+'.lrc', mode='w', encoding='utf-8')
+    #     f.write(data)
+    #     f.close()
+
+    down_lyric_line(songid)
+    down_lyric_syl(songid)
+    print('Success, next song waiting...')
 
 if __name__=='__main__':
     while 1:

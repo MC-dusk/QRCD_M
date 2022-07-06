@@ -1,4 +1,6 @@
-# QRCD_M
+中文 | [ENGLISH](https://github.com/MC-dusk/QRCD_M/blob/master/README_EN.md)
+
+# [QRCD_M](https://github.com/MC-dusk/QRCD_M)
 
 修改自`QRCD`，自用。去除了原QRCD的网页GUI和播放歌词的功能（因为[用不了](https://github.com/xmcp/QRCD/issues/2)），只留下下载歌词的功能。
 
@@ -18,7 +20,7 @@
 - 在[foobar2000](https://www.foobar2000.org/)播放器中使用。
 - 使用[lua插件](https://github.com/qwe7989199/Lyric-Importer-for-Aegisub)将lrc导入aegisub中，进而制作歌词字幕或其他用途。
 
-# QRCD
+# [QRCD](https://github.com/xmcp/QRCD)
 
 > Fork自[QRCD](https://github.com/xmcp/QRCD)，以下是QRCD的简介。
 

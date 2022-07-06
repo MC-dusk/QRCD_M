@@ -1,4 +1,5 @@
 from os import mkdir
+import time
 import requests
 import urllib.parse
 from bs4 import BeautifulSoup as bs
@@ -7,11 +8,6 @@ import subprocess
 import re
 import datetime
 import zlib
-
-from sympy import content
-
-extract_xml_re=re.compile(r'<Lyric_1 LyricType="1" LyricContent="(.*?)"/>',re.DOTALL)
-lrc_line_re=re.compile(r'^\[(\d+:\d+(?:\.\d+)?)\](.*)$')
 
 def qrc_decode(data):
     data=binascii.hexlify(data)
@@ -71,6 +67,7 @@ def tamper_lyric(data):
     return b'[offset:0]\n'+data
     
 def lrc_to_dummy_qrc(data):
+    lrc_line_re=re.compile(r'^\[(\d+:\d+(?:\.\d+)?)\](.*)$')
     outputs=[]
     for line_s in data.replace('\r','').split('\n'):
         line=lrc_line_re.match(line_s)
@@ -93,6 +90,7 @@ def lrc_to_dummy_qrc(data):
     ])
     
 def extract_qrc_xml(data):
+    extract_xml_re=re.compile(r'<Lyric_1 LyricType="1" LyricContent="(.*?)"/>',re.DOTALL)
     if '<?xml ' not in data[:10]:
         #return data
         return lrc_to_dummy_qrc(data)
@@ -121,6 +119,7 @@ def down_lyric_line(songid):
         line_ign=''
         
         def format_time(ts):
+            # # 时间戳，三位小数兼容性不足，换用两位小数
             # return f'{ts//60000:02d}:{(ts//1000)%60:02d}.{ts%1000:03d}'
             return f'{ts//60000:02}:{(ts//1000)%60:02}.{ts%1000//10:02}'
 
@@ -147,7 +146,8 @@ def down_lyric_syl(songid):
         line_ign=''
         
         def format_time(ts):
-            # return f'{ts//60000:02}:{(ts//1000)%60:02}.{round(ts%1000/10):02}'
+            # 时间戳小数部分，从向下取整变为四舍五入
+            ts=round(ts/10)*10
             return f'{ts//60000:02}:{(ts//1000)%60:02}.{ts%1000//10:02}'
         
         for line in lrc.splitlines():
@@ -168,15 +168,16 @@ def down_lyric_syl(songid):
             lrc_output(lrc_type,line_ign,lrc_out,'syl')
 
 def lrc_output(lrc_type,line_ign,lrc_out,type):
-        f=open(f'lyric/{lrc_type}_{type}_ignore.txt', mode='w', encoding='utf-8')
+        f=open(f'lyric/{title}_{lrc_type}_{type}_ignore_{unix_time}.txt', mode='w', encoding='utf-8')
         f.write(line_ign)
         f.close()
 
-        f=open(f'lyric/{lrc_type}_{type}.lrc', mode='w', encoding='utf-8')
+        f=open(f'lyric/{title}_{lrc_type}_{type}_{unix_time}.lrc', mode='w', encoding='utf-8')
         f.write(lrc_out)
         f.close()    
 
 def main():
+    global title
     title=input('Input nothing to exit...\nTitle: ')
     if title=='':
         quit()
@@ -194,13 +195,16 @@ def main():
     except:
         pass
 
-    # # output origin decode text
+    # # output original decode text
     # res=fetch_lyric_by_id(songid,['orig','ts','roma'])
     # for typ,data in res.items():
-    #     f=open('lyric/'+typ+'.lrc', mode='w', encoding='utf-8')
+    #     f=open('lyric/'+typ+'_decode.lrc', mode='w', encoding='utf-8')
     #     f.write(data)
     #     f.close()
 
+    # 加入unix时间戳防止输出被重复覆盖
+    global unix_time
+    unix_time = str(int(time.time()))
     down_lyric_line(songid)
     down_lyric_syl(songid)
     print('Success, next song waiting...')

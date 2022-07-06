@@ -1,9 +1,2 @@
-os
 requests
-urllib.parse
-bs4
-binascii
-subprocess
-re
-datetime
-zlib
+beautifulsoup4

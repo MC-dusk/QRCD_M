@@ -1,3 +1,5 @@
+[中文](https://github.com/MC-dusk/QRCD_M/blob/master/README.md) | ENGLISH
+
 # [QRCD](https://github.com/xmcp/QRCD)
 
 A python tool to crawl & decrypt lyrics from `QQMusic`.

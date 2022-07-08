@@ -10,16 +10,17 @@
 
 ### 首选
 
-下载[release](https://github.com/MC-dusk/QRCD_M/releases)解压，运行`qrcd_m.exe`直接使用
+1. 下载[release](https://github.com/MC-dusk/QRCD_M/releases)解压，运行`qrcd_m.exe`直接使用（[v1.0备份](https://wwi.lanzoup.com/iIojh07ka10j)）
+2. 输入歌曲名（留空即退出），歌手名（可留空），根据返回序号选择其中一个下载（一般ID越大歌词越新）
+3. 下载结果在lyric子文件夹中，3个逐行的lrc，2个逐字的lrc，ignore是一些忽略的前置信息
 
 ### 可选
 
-1. 安装python
-2. 下载[代码库zip包](https://github.com/MC-dusk/QRCD/archive/refs/heads/master.zip)
-3. 在解压出的文件夹路径下打开命令行输入`pip install -r requirements.txt`
-4. 若无报错，双击`qrcd_m.py`运行（当然也可在命令行里运行）
-5. 输入歌曲名（留空即退出），歌手名（可留空），根据返回序号选择其中一个下载（一般ID越大歌词越新）
-6. 下载结果在lyric子文件夹中，3个逐行的lrc，2个逐字的lrc，ignore是一些忽略的前置信息
+如果本地安装了python的也可以使用py脚本运行，但您仍然需要在同一路径下放置`lib_qrc_decoder.exe`、`QQMusicCommon.dll`，如果是win7或win11系统还需要放置`msvcp100.dll`、`msvcr100.dll`。
+
+```bash
+pip install -r requirements.txt
+```
 
 ## 用途
 

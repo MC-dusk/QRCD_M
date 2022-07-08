@@ -180,14 +180,16 @@ def main():
     global title
     title=input('Input nothing to exit...\nTitle: ')
     if title=='':
-        quit()
+        return 0
     artist=input('Artist: ')
     print('Searching...')
     songlist=list(query_lyric(title,artist))
     for ind,song in enumerate(songlist):
         print('#%d: (%s) %s / %s / %s'%(ind,song['songid'],song['name'],song['singer'],song['album']))
-    cid=int(input('Select #: '))
-    songid=songlist[cid]['songid']
+    cid=input('Input nothing to exit...\nSelect: #')
+    if cid=='':
+        return 0
+    songid=songlist[int(cid)]['songid']
     print('Song ID = %s'%songid)
     print('Downloading...')
     try:
@@ -208,7 +210,8 @@ def main():
     down_lyric_line(songid)
     down_lyric_syl(songid)
     print('Success, next song waiting...')
+    return 1
 
 if __name__=='__main__':
-    while 1:
-        main()
+    while main():
+        pass

@@ -8,9 +8,15 @@
 
 ## 使用
 
+### 首选
+
+下载[release](https://github.com/MC-dusk/QRCD_M/releases)解压，运行`qrcd_m.exe`直接使用
+
+### 可选
+
 1. 安装python
 2. 下载[代码库zip包](https://github.com/MC-dusk/QRCD/archive/refs/heads/master.zip)
-3. 在解压出的文件夹路径下打开命令行输入`pip install requirements.txt`
+3. 在解压出的文件夹路径下打开命令行输入`pip install -r requirements.txt`
 4. 若无报错，双击`qrcd_m.py`运行（当然也可在命令行里运行）
 5. 输入歌曲名（留空即退出），歌手名（可留空），根据返回序号选择其中一个下载（一般ID越大歌词越新）
 6. 下载结果在lyric子文件夹中，3个逐行的lrc，2个逐字的lrc，ignore是一些忽略的前置信息

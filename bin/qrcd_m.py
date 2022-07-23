@@ -106,22 +106,18 @@ def fetch_lyric_by_id(songid,requested_type):
         else:
             ret[typ]=''
     return ret
+    # # 返回未解密歌词
     # return lrc
 
-def down_lyric_line(songid):
+def down_lyric_line(res):
     for language_type in ['orig','roma','ts']:
-        lrc=fetch_lyric_by_id(songid,['orig','roma','ts'])[language_type]
+        lrc=res[language_type]
         
         line_re=re.compile(r'^\[(\d+),\d+\](.*)$')
         repl_re=re.compile(r'\(\d+,\d+\)')
-        
+
         lrc_out=''
         line_ign=''
-        
-        def format_time(ts):
-            # # 时间戳，三位小数兼容性不足，换用两位小数
-            # return f'{ts//60000:02d}:{(ts//1000)%60:02d}.{ts%1000:03d}'
-            return f'{ts//60000:02}:{(ts//1000)%60:02}.{ts%1000//10:02}'
 
         for line in lrc.splitlines():
             line_res=line_re.match(line)
@@ -133,23 +129,18 @@ def down_lyric_line(songid):
             line_out=repl_re.sub('',line_out)
             lrc_out+=f'[{format_time(int(start_ts))}]{line_out}\n'
 
-            lrc_output(language_type,line_ign,lrc_out,'line')
+        lrc_output(language_type,line_ign,lrc_out,'line')
 
-def down_lyric_char(songid):
+def down_lyric_char(res):
     for language_type in ['orig','roma']:
-        lrc=fetch_lyric_by_id(songid,['orig','roma'])[language_type]
+        lrc=res[language_type]
         
         line_re=re.compile(r'^\[(\d+),(\d+)\](.*)$')
         char_re=re.compile(r'(.+?)\((\d+),\d+\)')
         
         lrc_out=''
         line_ign=''
-        
-        def format_time(ts):
-            # 时间戳小数部分，从向下取整变为四舍五入
-            ts=round(ts/10)*10
-            return f'{ts//60000:02}:{(ts//1000)%60:02}.{ts%1000//10:02}'
-        
+
         for line in lrc.splitlines():
             line_res=line_re.match(line)
             if not line_res:
@@ -165,10 +156,71 @@ def down_lyric_char(songid):
             line_out+=f'[{format_time(int(line_start)+int(line_dur))}]'
             lrc_out+=f'{line_out}\n'
 
-            lrc_output(language_type,line_ign,lrc_out,'char')
+        lrc_output(language_type,line_ign,lrc_out,'char')
+
+def down_lyric_mix(res):
+        lrc_og=res['orig']
+        lrc_ch=res['ts']
+
+        line_re=re.compile(r'^\[(\d+),(\d+)\](.*)$')
+        char_re=re.compile(r'(.+?)\((\d+),\d+\)')
+        repl_re=re.compile(r'\(\d+,\d+\)')
+        
+        lrc_out=''
+        line_ign=''
+        
+        list_og=lrc_og.splitlines()
+        list_ch=lrc_ch.splitlines()
+
+        n = len(list_og)
+        for h in range(n):
+            line_og=list_og[h]
+            line_og_res=line_re.match(line_og)
+            if not line_og_res==None:
+                break
+            line_ign+=line_og+'\n'
+        m = len(list_ch) + h
+        if n != m:
+            print("! Can't mix two languages for different amount of line !")
+            return
+
+        for i in range(n-h):
+            line_og=list_og[i+h]
+            line_og_res=line_re.match(line_og)
+            line_ch=list_ch[i]
+            line_ch_res=line_re.match(line_ch)
+
+            # if not line_og_res:
+            #     line_ign+=line_og+'\n'
+            # if not line_ch_res:
+            #     line_ign+=line_ch+'\n'
+            # if not (line_og_res and line_ch_res):
+            #     continue
+
+            line_start,line_dur,line_lyric=line_og_res.groups()
+            char_list=char_re.finditer(line_lyric)
+            line_out=''
+            for char in char_list:
+                char,char_start=char.groups()
+                line_out+=f'[{format_time(int(char_start))}]{char}'
+            line_out+=f'[{format_time(int(line_start)+int(line_dur))}]'
+            lrc_out+=f'{line_out}\n'            
+
+            line_out=line_ch_res.group(3)
+            line_out=repl_re.sub('',line_out)
+            lrc_out+=f'[{format_time(int(line_start)+int(line_dur)-20)}]{line_out}\n'
+
+        lrc_output('mix',line_ign,lrc_out,'mix')
+
+def format_time(ts):
+    # # 时间戳，三位小数兼容性不足，换用两位小数
+    # return f'{ts//60000:02d}:{(ts//1000)%60:02d}.{ts%1000:03d}'
+    # 时间戳小数部分，从向下取整变为四舍五入
+    ts=round(ts/10)*10            
+    return f'{ts//60000:02}:{(ts//1000)%60:02}.{ts%1000//10:02}'
 
 def lrc_output(language_type,line_ign,lrc_out,lrc_type):
-    dic = {'orig':'jp','roma':'rm','ts':'ch'}
+    dic = {'orig':'og','roma':'rm','ts':'ch','mix':'og&ch'}
     f=open(f'{lrc_path}/{title}-{dic[language_type]}-{lrc_type}-ignr.txt', mode='w', encoding='utf-8')
     f.write(line_ign)
     f.close()
@@ -209,17 +261,18 @@ def main():
     f.write(song_list)
     f.close()
 
+    res=fetch_lyric_by_id(songid,['orig','roma','ts'])
     # # output original decode text
     # # warning: will overwrite
-    # res=fetch_lyric_by_id(songid,['orig','ts','roma'])
     # for typ,data in res.items():
     #     f=open(os.path.dirname(__file__)+f'/lyric/{typ}_decode.lrc', mode='w', encoding='utf-8')
     #     f.write(data)
     #     f.close()
 
-    down_lyric_line(songid)
-    down_lyric_char(songid)
-    print('@Success, next song waiting...')
+    down_lyric_line(res)
+    down_lyric_char(res)
+    down_lyric_mix(res)
+    print('@ Success, next song waiting...')
     return 1
 
 if __name__=='__main__':

@@ -1,4 +1,4 @@
-from os import mkdir
+import os
 import time
 import requests
 import urllib.parse
@@ -11,7 +11,7 @@ import zlib
 
 def qrc_decode(data):
     data=binascii.hexlify(data)
-    p=subprocess.Popen('lib_qrc_decoder.exe',stdin=subprocess.PIPE,stdout=subprocess.PIPE)
+    p=subprocess.Popen(os.path.dirname(__file__)+'/lib_qrc_decoder.exe',stdin=subprocess.PIPE,stdout=subprocess.PIPE)
     stdout,stderr=p.communicate(data+b'\n\n')
     if stderr:
         raise RuntimeError(stderr.decode(errors='ignore'))
@@ -109,8 +109,8 @@ def fetch_lyric_by_id(songid,requested_type):
     # return lrc
 
 def down_lyric_line(songid):
-    for lrc_type in ['orig','roma','ts']:
-        lrc=fetch_lyric_by_id(songid,['orig','roma','ts'])[lrc_type]
+    for language_type in ['orig','roma','ts']:
+        lrc=fetch_lyric_by_id(songid,['orig','roma','ts'])[language_type]
         
         line_re=re.compile(r'^\[(\d+),\d+\](.*)$')
         repl_re=re.compile(r'\(\d+,\d+\)')
@@ -133,14 +133,14 @@ def down_lyric_line(songid):
             line_out=repl_re.sub('',line_out)
             lrc_out+=f'[{format_time(int(start_ts))}]{line_out}\n'
 
-            lrc_output(lrc_type,line_ign,lrc_out,'line')
+            lrc_output(language_type,line_ign,lrc_out,'line')
 
-def down_lyric_syl(songid):
-    for lrc_type in ['orig','roma']:
-        lrc=fetch_lyric_by_id(songid,['orig','roma'])[lrc_type]
+def down_lyric_char(songid):
+    for language_type in ['orig','roma']:
+        lrc=fetch_lyric_by_id(songid,['orig','roma'])[language_type]
         
         line_re=re.compile(r'^\[(\d+),(\d+)\](.*)$')
-        syl_re=re.compile(r'(.+?)\((\d+),\d+\)')
+        char_re=re.compile(r'(.+?)\((\d+),\d+\)')
         
         lrc_out=''
         line_ign=''
@@ -157,28 +157,29 @@ def down_lyric_syl(songid):
                 line_ign+=line+'\n'
                 continue
             line_start,line_dur,line_lyric=line_res.groups()
-            syl_list=syl_re.finditer(line_lyric)
+            char_list=char_re.finditer(line_lyric)
             line_out=''
-            for syl in syl_list:
-                char,syl_start=syl.groups()
-                line_out+=f'[{format_time(int(syl_start))}]{char}'
+            for char in char_list:
+                char,char_start=char.groups()
+                line_out+=f'[{format_time(int(char_start))}]{char}'
             line_out+=f'[{format_time(int(line_start)+int(line_dur))}]'
             lrc_out+=f'{line_out}\n'
 
-            lrc_output(lrc_type,line_ign,lrc_out,'syl')
+            lrc_output(language_type,line_ign,lrc_out,'char')
 
-def lrc_output(lrc_type,line_ign,lrc_out,type):
-        f=open(f'lyric/{title}_{lrc_type}_{type}_ignore_{unix_time}.txt', mode='w', encoding='utf-8')
-        f.write(line_ign)
-        f.close()
+def lrc_output(language_type,line_ign,lrc_out,lrc_type):
+    dic = {'orig':'jp','roma':'rm','ts':'ch'}
+    f=open(f'{lrc_path}/{title}-{dic[language_type]}-{lrc_type}-ignr.txt', mode='w', encoding='utf-8')
+    f.write(line_ign)
+    f.close()
 
-        f=open(f'lyric/{title}_{lrc_type}_{type}_{unix_time}.lrc', mode='w', encoding='utf-8')
-        f.write(lrc_out)
-        f.close()    
+    f=open(f'{lrc_path}/{title}-{dic[language_type]}-{lrc_type}.lrc', mode='w', encoding='utf-8')
+    f.write(lrc_out)
+    f.close()    
 
 def main():
     global title
-    title=input('Input nothing to exit...\nTitle: ')
+    title=input('(Input nothing to exit...)\nTitle: ')
     if title=='':
         return 0
     artist=input('Artist: ')
@@ -190,26 +191,35 @@ def main():
     if cid=='':
         return 0
     songid=songlist[int(cid)]['songid']
-    print('Song ID = %s'%songid)
+    # print('Song ID = %s'%songid)
     print('Downloading...')
-    try:
-        mkdir('./lyric')
-    except:
-        pass
-
-    # # output original decode text
-    # res=fetch_lyric_by_id(songid,['orig','ts','roma'])
-    # for typ,data in res.items():
-    #     f=open('lyric/'+typ+'_decode.lrc', mode='w', encoding='utf-8')
-    #     f.write(data)
-    #     f.close()
 
     # 加入unix时间戳防止输出被重复覆盖
     global unix_time
     unix_time = str(int(time.time()))
+    list_path=os.path.dirname(__file__)+f'/lyric/{title}-{artist}'
+    global lrc_path
+    lrc_path = list_path+f'/{cid}-{unix_time}'
+    os.makedirs(lrc_path,exist_ok=True)
+
+    f=open(list_path+f'/{title}-{artist}-idlist.txt', mode='w', encoding='utf-8')
+    song_list=''
+    for ind,song in enumerate(songlist):
+        song_list += '#%d: (%s) %s / %s / %s\n'%(ind,song['songid'],song['name'],song['singer'],song['album'])
+    f.write(song_list)
+    f.close()
+
+    # # output original decode text
+    # # warning: will overwrite
+    # res=fetch_lyric_by_id(songid,['orig','ts','roma'])
+    # for typ,data in res.items():
+    #     f=open(os.path.dirname(__file__)+f'/lyric/{typ}_decode.lrc', mode='w', encoding='utf-8')
+    #     f.write(data)
+    #     f.close()
+
     down_lyric_line(songid)
-    down_lyric_syl(songid)
-    print('Success, next song waiting...')
+    down_lyric_char(songid)
+    print('@Success, next song waiting...')
     return 1
 
 if __name__=='__main__':

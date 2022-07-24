@@ -1,4 +1,4 @@
-[中文](https://github.com/MC-dusk/QRCD_M/blob/master/README.md) | ENGLISH
+[中文](https://github.com/MC-dusk/QRCD_M/blob/master/docs/README.md) | ENGLISH
 
 # [QRCD](https://github.com/xmcp/QRCD)
 

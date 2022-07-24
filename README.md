@@ -37,3 +37,4 @@ pip install -r requirements.txt
 
 *Note: decrypting algorithm learnt from [qwe7989199/Lyric-Importer-for-Aegisub](https://github.com/qwe7989199/Lyric-Importer-for-Aegisub).*
 
+[![Page Views Count](https://badges.toozhao.com/badges/01G6ZJY3322Y59H9X1J3XHN2M5/green.svg)](https://badges.toozhao.com/stats/01G6ZJY3322Y59H9X1J3XHN2M5 "Get your own page views count badge on badges.toozhao.com")

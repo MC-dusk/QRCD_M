@@ -1,4 +1,4 @@
-[中文](https://github.com/MC-dusk/QRCD_M/blob/master/docs/README.md) | ENGLISH
+> **[中文](https://github.com/MC-dusk/QRCD_M/blob/master/docs/README.md) | ENGLISH**
 
 # [QRCD](https://github.com/xmcp/QRCD)
 
@@ -14,13 +14,7 @@ Modified from `QRCD`, support directly download precise lrc files which can be u
 
 # Useful Links
 
-https://www.foobar2000.org
-
-https://github.com/qwe7989199/Lyric-Importer-for-Aegisub
-
-https://gitee.com/ying32/MakeLyric
-
-### ESLyric
+### ESLyric Plugin
 
 https://github.com/he0119/ESLyric-Lyric
 
@@ -31,3 +25,11 @@ https://github.com/Robotxm/ESLyric-LyricsSource
 https://github.com/EHfive/Some-js-script-for-FB2K
 
 https://github.com/JumuFENG/foobar2000_ESLyricScript
+
+### Similar Tools
+
+https://www.foobar2000.org
+
+https://github.com/qwe7989199/Lyric-Importer-for-Aegisub
+
+**https://gitee.com/ying32/MakeLyric**

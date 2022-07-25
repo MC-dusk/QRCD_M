@@ -1,4 +1,5 @@
 import os
+import sys
 import time
 import requests
 import urllib.parse
@@ -9,9 +10,14 @@ import re
 import datetime
 import zlib
 
+if getattr(sys, 'frozen', False):
+    root_path = os.path.dirname(sys.executable)
+else:
+    root_path = os.path.dirname(__file__)
+
 def qrc_decode(data):
     data=binascii.hexlify(data)
-    p=subprocess.Popen(os.path.dirname(__file__)+'/lib_qrc_decoder.exe',stdin=subprocess.PIPE,stdout=subprocess.PIPE)
+    p=subprocess.Popen(root_path+'/lib_qrc_decoder.exe',stdin=subprocess.PIPE,stdout=subprocess.PIPE)
     stdout,stderr=p.communicate(data+b'\n\n')
     if stderr:
         raise RuntimeError(stderr.decode(errors='ignore'))
@@ -250,7 +256,7 @@ def main():
     # 加入unix时间戳防止输出被重复覆盖
     global unix_time
     unix_time = str(int(time.time()))
-    list_path=os.path.dirname(__file__)+f'/lyric/{title}-{artist}'
+    list_path=root_path+f'/lyric/{title}-{artist}'
     global lrc_path
     lrc_path = list_path+f'/{cid}-{unix_time}'
     os.makedirs(lrc_path,exist_ok=True)
@@ -266,7 +272,7 @@ def main():
     # # output original decode text
     # # warning: will overwrite
     # for typ,data in res.items():
-    #     f=open(os.path.dirname(__file__)+f'/lyric/{typ}_decode.lrc', mode='w', encoding='utf-8')
+    #     f=open(root_path+f'/lyric/{typ}_decode.lrc', mode='w', encoding='utf-8')
     #     f.write(data)
     #     f.close()
 

@@ -241,7 +241,8 @@ def main():
         print('#%d: (%s) %s / %s / %s'%(ind,song['songid'],song['name'],song['singer'],song['album']))
     cid=input('Input nothing to exit...\nSelect: #')
     if cid=='':
-        return 0
+        print('* No select')
+        return 1
     songid=songlist[int(cid)]['songid']
     # print('Song ID = %s'%songid)
     print('Downloading...')

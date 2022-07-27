@@ -1,7 +1,6 @@
 import os
 import sys
 import time
-from tokenize import blank_re
 import requests
 import urllib.parse
 from bs4 import BeautifulSoup as bs
@@ -24,6 +23,7 @@ def qrc_decode(data):
         raise RuntimeError(stderr.decode(errors='ignore'))
     data=binascii.unhexlify(stdout.strip())
 
+    # # test code
     # f=open(root_path+f'/lyric/data.txt', mode='wb')
     # f.write(data)
     # f.close()
@@ -95,7 +95,7 @@ def lrc_to_dummy_qrc(data):
     if not outputs:
         return ''
     
-    outputs.append((2147483647,'')) # end
+    outputs.append((2147483647,'')) # end # 2147483647 = 2^31 - 1
     
     return '\n'.join([
         '[%d,%d]%s'%(time,outputs[ind+1][0]-time,content) for ind,(time,content) in enumerate(outputs[:-1]) if content
@@ -213,7 +213,7 @@ def down_lyric_mix(res):
             line_ch=list_ch[i]
             line_ch_res=line_re.match(line_ch)
 
-            # # 一般不会出现歌词中间的行有问题，注释掉不做判断
+            # # 歌词中间的行一般不会有问题，注释掉节省判断
             # if not line_og_res:
             #     line_ign+=line_og+'\n'
             # if not line_ch_res:

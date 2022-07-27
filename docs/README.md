@@ -10,7 +10,7 @@
 
 ### 首选
 
-1. 下载[release](https://github.com/MC-dusk/QRCD_M/releases)解压，运行`qrcd_m.exe`直接使用。（[v1.0备份](https://wwi.lanzoup.com/iIojh07ka10j)）
+1. 下载[release](https://github.com/MC-dusk/QRCD_M/releases)解压，运行`qrcd_m.exe`直接使用。
 2. 输入歌曲名（留空即退出），歌手名（可留空），根据返回序号选择其中一个下载（一般ID越大歌词越新）。
 3. 下载结果在lyric子文件夹中，按歌曲名分类。根据歌曲语言，最多有3个逐行的lrc，2个逐字的lrc，1个双语逐字歌词。ignr是一些忽略的前置信息，如不需要可手动删除。
 

@@ -1,18 +1,27 @@
-> **中文 | [ENGLISH](https://github.com/MC-dusk/QRCD_M/blob/master/docs/README_EN.md)**
+**中文 | [ENGLISH](https://github.com/MC-dusk/QRCD_M/blob/master/docs/README_EN.md)**
 
-# [QRCD_M](https://github.com/MC-dusk/QRCD_M)
-
-修改自`QRCD`，自用。去除了原QRCD的网页GUI和播放歌词的功能（因为[用不了](https://github.com/xmcp/QRCD/issues/2)），只留下下载歌词的功能。
+# QRCD_M
 
 > 白嫖QQ音乐的打轴，只需输入歌曲名即可得到精准逐字lrc歌词，再也不用K轴辣！
+
+修改自[QRCD](https://github.com/xmcp/QRCD)，自用。去除了原QRCD的网页GUI和播放歌词的功能（因为[用不了](https://github.com/xmcp/QRCD/issues/2)），只留下下载歌词的功能。
 
 ## 使用
 
 ### 首选
 
-1. 下载[release](https://github.com/MC-dusk/QRCD_M/releases)解压，运行`qrcd_m.exe`直接使用。（[v1.0备份](https://wwi.lanzoup.com/iIojh07ka10j)）
+1. 下载[release](https://github.com/MC-dusk/QRCD_M/releases)解压，运行`qrcd_m.exe`直接使用。
 2. 输入歌曲名（留空即退出），歌手名（可留空），根据返回序号选择其中一个下载（一般ID越大歌词越新）。
-3. 下载结果在lyric子文件夹中，按歌曲名分类。根据歌曲语言，最多有3个逐行的lrc，2个逐字的lrc，1个双语逐字歌词。ignr是一些忽略的前置信息，如不需要可手动删除。
+3. 下载结果在lyric子文件夹中，按歌曲名分类。根据歌曲语言，最多有3个逐行的lrc，2个逐字的lrc，1个双语逐字歌词。`ignr`是一些忽略的前置信息，如不需要可手动删除。
+
+| 文件名          | 说明                           |
+| :-------------- | ------------------------------ |
+| ALIVE-ch-line   | 翻译的中文歌词                 |
+| ALIVE-og&ch-mix | 双语歌词，适用于`foobar2000`等 |
+| ALIVE-og-char   | 原文逐字歌词                   |
+| ALIVE-og-line   | 原文逐行歌词                   |
+| ALIVE-rm-char   | 罗马音逐字歌词（日韩语等）     |
+| ALIVE-rm-line   | 罗马音逐行歌词（日韩语等）     |
 
 ### 可选
 
@@ -26,10 +35,11 @@
 
 - 在[foobar2000](https://www.foobar2000.org/)播放器中使用。
 - 使用[lua插件](https://github.com/qwe7989199/Lyric-Importer-for-Aegisub)将lrc导入aegisub中，进而制作歌词字幕或其他用途。
+- 其他
 
-# [QRCD](https://github.com/xmcp/QRCD)
+# QRCD
 
-> Fork自QRCD，以下是原简介（翻译后）。
+> 以下是原简介（翻译后）。
 
 一个从QQMusic爬取歌词的python脚本。
 

@@ -1,6 +1,7 @@
 import os
 import sys
 import time
+from tokenize import blank_re
 import requests
 import urllib.parse
 from bs4 import BeautifulSoup as bs
@@ -22,10 +23,15 @@ def qrc_decode(data):
     if stderr:
         raise RuntimeError(stderr.decode(errors='ignore'))
     data=binascii.unhexlify(stdout.strip())
+
+    # f=open(root_path+f'/lyric/data.txt', mode='wb')
+    # f.write(data)
+    # f.close()
+
     try:
-        return zlib.decompress(data)
+        return zlib.decompress(data, zlib.MAX_WBITS|32)
     except Exception as e:
-        print('!! decode error',type(e),e)
+        print('! decode error',type(e),e,'!')
         return b''
     
 def query_lyric(name,singer):
@@ -105,6 +111,8 @@ def extract_qrc_xml(data):
     
 def fetch_lyric_by_id(songid,requested_type):
     lrc=download_lyric(songid)
+    # # 返回未解密歌词
+    # return lrc
     ret={}
     for typ in requested_type:
         if lrc[typ]:
@@ -112,8 +120,6 @@ def fetch_lyric_by_id(songid,requested_type):
         else:
             ret[typ]=''
     return ret
-    # # 返回未解密歌词
-    # return lrc
 
 def down_lyric_line(res):
     for language_type in ['orig','roma','ts']:
@@ -134,7 +140,9 @@ def down_lyric_line(res):
             start_ts,line_out=line_res.groups()
             line_out=repl_re.sub('',line_out)
             lrc_out+=f'[{format_time(int(start_ts))}]{line_out}\n'
-
+        
+        if lrc_out == '':
+            continue
         lrc_output(language_type,line_ign,lrc_out,'line')
 
 def down_lyric_char(res):
@@ -161,13 +169,21 @@ def down_lyric_char(res):
                 line_out+=f'[{format_time(int(char_start))}]{char}'
             line_out+=f'[{format_time(int(line_start)+int(line_dur))}]'
             lrc_out+=f'{line_out}\n'
-
+        
+        if lrc_out == '':
+            continue
         lrc_output(language_type,line_ign,lrc_out,'char')
 
 def down_lyric_mix(res):
         lrc_og=res['orig']
         lrc_ch=res['ts']
-
+        if lrc_og == '':
+            print('! No original lyric !')
+            return 1
+        if lrc_ch == '':
+            print('* No translated lyric')
+            return 0
+        
         line_re=re.compile(r'^\[(\d+),(\d+)\](.*)$')
         char_re=re.compile(r'(.+?)\((\d+),\d+\)')
         repl_re=re.compile(r'\(\d+,\d+\)')
@@ -178,24 +194,26 @@ def down_lyric_mix(res):
         list_og=lrc_og.splitlines()
         list_ch=lrc_ch.splitlines()
 
-        n = len(list_og)
-        for h in range(n):
-            line_og=list_og[h]
+        len_og = len(list_og)
+        # "line_df" is the amount of lines which can't be paired between "og" and "ch"
+        for line_df in range(len_og):
+            line_og=list_og[line_df]
             line_og_res=line_re.match(line_og)
             if not line_og_res==None:
                 break
             line_ign+=line_og+'\n'
-        m = len(list_ch) + h
-        if n != m:
+        if len_og != (len(list_ch) + line_df):
+            # print(len_og, len(list_ch), line_df)
             print("! Can't mix two languages for different amount of line !")
             return
 
-        for i in range(n-h):
-            line_og=list_og[i+h]
+        for i in range(len_og-line_df):
+            line_og=list_og[i+line_df]
             line_og_res=line_re.match(line_og)
             line_ch=list_ch[i]
             line_ch_res=line_re.match(line_ch)
 
+            # # 一般不会出现歌词中间的行有问题，注释掉不做判断
             # if not line_og_res:
             #     line_ign+=line_og+'\n'
             # if not line_ch_res:
@@ -217,6 +235,7 @@ def down_lyric_mix(res):
             lrc_out+=f'[{format_time(int(line_start)+int(line_dur)-20)}]{line_out}\n'
 
         lrc_output('mix',line_ign,lrc_out,'mix')
+        return 0
 
 def format_time(ts):
     # # 时间戳，三位小数兼容性不足，换用两位小数
@@ -237,24 +256,23 @@ def lrc_output(language_type,line_ign,lrc_out,lrc_type):
 
 def main():
     global title
-    title=input('(Input nothing to exit...)\nTitle: ')
+    title=input('(Input nothing to exit...)\n@ Title: ')
     if title=='':
-        return 0
-    artist=input('Artist: ')
-    print('Searching...')
+        return 1
+    artist=input('(Fill or leave a blank...)\n@ Artist: ')
+    print('@ Searching...')
     songlist=list(query_lyric(title,artist))
     for ind,song in enumerate(songlist):
         print('#%d: (%s) %s / %s / %s'%(ind,song['songid'],song['name'],song['singer'],song['album']))
-    cid=input('Input nothing to exit...\nSelect: #')
+    cid=input('(Input nothing to cancel...)\n@ Select: #')
     if cid=='':
-        print('* No select')
-        return 1
+        print('* No selection, next song waiting...')
+        return 0
     songid=songlist[int(cid)]['songid']
     # print('Song ID = %s'%songid)
-    print('Downloading...')
+    print('@ Downloading...')
 
     # 加入unix时间戳防止输出被重复覆盖
-    global unix_time
     unix_time = str(int(time.time()))
     list_path=root_path+f'/lyric/{title}-{artist}'
     global lrc_path
@@ -276,12 +294,15 @@ def main():
     #     f.write(data)
     #     f.close()
 
+    if down_lyric_mix(res) == 1:
+        print('! Failed, next song waiting... !')
+        return 0
     down_lyric_line(res)
     down_lyric_char(res)
-    down_lyric_mix(res)
-    print('@ Success, next song waiting...')
-    return 1
+    print('@ Complete, next song waiting...')
+    return 0
 
 if __name__=='__main__':
-    while main():
+    # quit when main() return 1
+    while not main():
         pass

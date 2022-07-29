@@ -203,8 +203,8 @@ def down_lyric_mix(res):
                 break
             line_ign+=line_og+'\n'
         if len_og != (len(list_ch) + line_df):
-            # print(len_og, len(list_ch), line_df)
-            print("! Can't mix two languages for different amount of line !")
+            print(len_og, len(list_ch), line_df)
+            print("* Can't mix two languages for different amount of line")
             return
 
         for i in range(len_og-line_df):
@@ -256,37 +256,46 @@ def lrc_output(language_type,line_ign,lrc_out,lrc_type):
 
 def main():
     global title
-    title=input('(Input nothing to exit...)\n@ Title: ')
-    if title=='':
+    title = input('(Input nothing to exit...)\n@ Title: ')
+    if title == '':
         return 1
-    artist=input('(Fill or leave a blank...)\n@ Artist: ')
+    artist = input('(Fill or leave a blank...)\n@ Artist: ')
     print('@ Searching...')
-    songlist=list(query_lyric(title,artist))
+    songlist = list(query_lyric(title,artist))
+    if songlist == []:
+        print('* No result, next song waiting...')
+        return 0
+    # print list for user to select
     for ind,song in enumerate(songlist):
         print('#%d: (%s) %s / %s / %s'%(ind,song['songid'],song['name'],song['singer'],song['album']))
-    cid=input('(Input nothing to cancel...)\n@ Select: #')
-    if cid=='':
+    cid = input('(Input nothing to cancel...)\n@ Select: #')
+    if cid == '':
         print('* No selection, next song waiting...')
         return 0
-    songid=songlist[int(cid)]['songid']
+    try:
+        CID = eval(cid)
+        songid = songlist[CID]['songid']
+    except:
+        print('* Invalid input, next song waiting...')
+        return 0
     # print('Song ID = %s'%songid)
     print('@ Downloading...')
 
     # 加入unix时间戳防止输出被重复覆盖
     unix_time = str(int(time.time()))
-    list_path=root_path+f'/lyric/{title}-{artist}'
+    list_path = root_path+f'/lyric/{title}-{artist}'
     global lrc_path
     lrc_path = list_path+f'/{cid}-{unix_time}'
     os.makedirs(lrc_path,exist_ok=True)
 
-    f=open(list_path+f'/{title}-{artist}-idlist.txt', mode='w', encoding='utf-8')
-    song_list=''
+    f = open(list_path+f'/{title}-{artist}-idlist.txt', mode='w', encoding='utf-8')
+    song_list = ''
     for ind,song in enumerate(songlist):
         song_list += '#%d: (%s) %s / %s / %s\n'%(ind,song['songid'],song['name'],song['singer'],song['album'])
     f.write(song_list)
     f.close()
 
-    res=fetch_lyric_by_id(songid,['orig','roma','ts'])
+    res = fetch_lyric_by_id(songid,['orig','roma','ts'])
     # # output original decode text
     # # warning: will overwrite
     # for typ,data in res.items():

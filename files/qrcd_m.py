@@ -14,6 +14,8 @@ if getattr(sys, 'frozen', False):
     root_path = os.path.dirname(sys.executable)
 else:
     root_path = os.path.dirname(__file__)
+if not root_path:
+    root_path = '.'
 
 def qrc_decode(data):
     data=binascii.hexlify(data)
@@ -280,6 +282,12 @@ def main():
         return 0
     # print('Song ID = %s'%songid)
     print('@ Downloading...')
+
+    def fullwidth(s):
+        return s.translate(str.maketrans(r'"*/:<>?\|', '＂＊／：＜＞？＼｜'))
+
+    # 防止出现Windows特殊字符
+    title, artist = (s.translate(str.maketrans(r'"*/:<>?\|', '＂＊／：＜＞？＼｜')) for s in (title, artist))
 
     # 加入unix时间戳防止输出被重复覆盖
     unix_time = str(int(time.time()))

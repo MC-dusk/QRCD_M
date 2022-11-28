@@ -33,3 +33,5 @@ https://www.foobar2000.org
 https://github.com/qwe7989199/Lyric-Importer-for-Aegisub
 
 **https://gitee.com/ying32/MakeLyric**
+
+**https://github.com/jitwxs/163MusicLyrics**

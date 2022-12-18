@@ -16,19 +16,27 @@ Modified from `QRCD`, support directly download precise lrc files which can be u
 
 ### ESLyric Plugin
 
+https://www.foobar2000.org
+
+https://github.com/ESLyric/release
+
+### ESLyric Scripts
+
+> sort by recently active
+
+https://github.com/Robotxm/ESLyric-LyricsSource
+
+**https://github.com/ESLyric/scripts**
+
 https://github.com/he0119/ESLyric-Lyric
 
 https://github.com/Konata09/ESLyric_netease
-
-https://github.com/Robotxm/ESLyric-LyricsSource
 
 https://github.com/EHfive/Some-js-script-for-FB2K
 
 https://github.com/JumuFENG/foobar2000_ESLyricScript
 
-### Similar Tools
-
-https://www.foobar2000.org
+### Related Tools
 
 https://github.com/qwe7989199/Lyric-Importer-for-Aegisub
 
